@@ -7,10 +7,10 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/assets/ui.css">
+<link rel="stylesheet" href="./assets/ui.css">
 <style>
 /* ==========================================================================
-   Токены экрана (общие лежат в /assets/ui.css)
+   Токены экрана (общие лежат в ./assets/ui.css)
    ========================================================================== */
 :root {
   --row-h: 44px;
@@ -339,7 +339,7 @@ tbody tr:hover .dots, .dots:focus-visible, .dots[aria-expanded="true"] { opacity
         </footer>
       </div>
 
-      <!-- Остальные разделы рисуются из /admin/pages.js -->
+      <!-- Остальные разделы рисуются из ./pages.js -->
       <div id="page-other"></div>
     </main>
   </div>
@@ -354,9 +354,9 @@ tbody tr:hover .dots, .dots:focus-visible, .dots[aria-expanded="true"] { opacity
 
 <div class="toast" id="toast" role="status"></div>
 
-<script src="/assets/common.js"></script>
-<script src="/assets/booking-dialog.js"></script>
-<script src="/admin/pages.js"></script>
+<script src="./assets/common.js"></script>
+<script src="./assets/booking-dialog.js"></script>
+<script src="./pages.js"></script>
 <script>
 /* ==========================================================================
    Утилиты
@@ -364,8 +364,8 @@ tbody tr:hover .dots, .dots:focus-visible, .dots[aria-expanded="true"] { opacity
 const { $, $$, esc, initials, money, statusChip, toothLabel } = SG;
 const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
 // Узкий экран получает отдельную мобильную версию.
-if (matchMedia("(max-width: 760px)").matches && !location.search.includes("desktop")) location.replace("/admin/m");
-const toLogin = () => location.replace("/login");
+if (matchMedia("(max-width: 760px)").matches && !location.search.includes("desktop")) location.replace("./mobile.html");
+const toLogin = () => location.replace("./login.html");
 const get = (url) => SG.api(url, { on401: toLogin });
 const toast = SG.toast;
 

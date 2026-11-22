@@ -1,8 +1,8 @@
 /* Разделы админки: календарь, пациенты, услуги, врачи, касса, отчёты, настройки.
-   Отдаётся сервером только администраторам. Подключается после common.js; регистрирует window.Pages. */
+   Подключается после common.js; регистрирует window.Pages. */
 (() => {
   const { $, $$, esc, api, toast, money, fmtDateTime, fmtTime, statusChip, toothLabel, today, addDays, initials } = SG;
-  const toLogin = () => location.replace("/login");
+  const toLogin = () => location.replace("./login.html");
   const get = (u) => api(u, { on401: toLogin });
   const send = (method, u, body) => api(u, { method, body, on401: toLogin });
   const isOwner = () => window.Me?.role === "owner";

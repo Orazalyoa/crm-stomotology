@@ -6,7 +6,7 @@
 <meta name="robots" content="noindex">
 <title>Sergek Dent — админ</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/assets/ui.css">
+<link rel="stylesheet" href="./assets/ui.css">
 <style>
   /* Мобильная админка: одна колонка, нижняя навигация, записи карточками вместо таблицы. */
   body { padding-bottom: calc(76px + env(safe-area-inset-bottom)); }
@@ -90,7 +90,7 @@
     <h1>Ещё</h1>
     <button class="card list-item" id="tg" style="width:100%">Подключить Telegram <span class="hint" id="tgState"></span></button>
     <a class="card list-item" id="pub" href="#" target="_blank" rel="noopener" style="text-decoration:none;color:inherit">Страница онлайн-записи <span class="hint">открыть</span></a>
-    <a class="card list-item" href="/admin?desktop=1" style="text-decoration:none;color:inherit">Полная версия <span class="hint">для компьютера</span></a>
+    <a class="card list-item" href="./index.html?desktop=1" style="text-decoration:none;color:inherit">Полная версия <span class="hint">для компьютера</span></a>
     <button class="card list-item" id="logout" style="width:100%;color:var(--danger)">Выйти</button>
   </section>
 </div>
@@ -104,13 +104,13 @@
   <button data-view="more"><svg class="ic" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg>Ещё</button>
 </nav>
 
-<script src="/assets/common.js"></script>
-<script src="/assets/booking-dialog.js"></script>
+<script src="./assets/common.js"></script>
+<script src="./assets/booking-dialog.js"></script>
 <script>
   const { $, $$, esc, api, toast, fmtTime, fmtDay, statusChip, money } = SG;
   // На широком экране показываем полную версию.
-  if (matchMedia("(min-width: 1000px)").matches && !location.search.includes("mobile")) location.replace("/admin");
-  const toLogin = () => location.replace("/login");
+  if (matchMedia("(min-width: 1000px)").matches && !location.search.includes("mobile")) location.replace("./index.html");
+  const toLogin = () => location.replace("./login.html");
   const get = (u) => api(u, { on401: toLogin });
   const state = { tab: "upcoming", page: 1, q: "" };
   let byId = {}, clients = [];
