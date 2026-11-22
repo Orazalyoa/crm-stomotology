@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Онлайн-запись — Sergek Dent</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/ui.css">
+<style>
+  /* Страница клиента: онлайн-запись и личный кабинет. Только телефон и планшет, одна колонка. */
+  body { padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
+  .wrap { max-width: 560px; margin: 0 auto; padding: 16px; }
+  header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; gap: 12px; }
+  .brand { font-weight: 600; font-size: 15px; display: flex; align-items: center; gap: 10px; }
+  .tabs { display: flex; gap: 6px; background: var(--stone); padding: 4px; border-radius: var(--r-ctl); margin-bottom: 18px; }
+  .tabs a { flex: 1; text-align: center; padding: 9px; border-radius: 8px; text-decoration: none; color: inherit; font-size: 13px; }
+  .tabs a.on { background: #fff; color: var(--ink); font-weight: 600; box-shadow: var(--shadow); }
+  h1 { font-size: 20px; font-weight: 600; margin-bottom: 4px; }
+  .sub { color: var(--muted); font-size: 13px; margin-bottom: 16px; }
+  .opt { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 14px 16px; background: var(--card); border: 1px solid var(--line); border-radius: var(--r-card); margin-bottom: 10px; cursor: pointer; transition: border-color .2s var(--ease), transform .2s var(--ease); width: 100%; text-align: left; }
+  .opt.on { border-color: var(--accent); background: var(--accent-soft); box-shadow: 0 0 0 1px var(--accent) inset; }
+  .opt:active { transform: scale(.985); }
+  .opt .price { font-weight: 500; white-space: nowrap; }
+  .days { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 14px; scrollbar-width: none; }
+  .day { min-width: 62px; padding: 10px 6px; border-radius: var(--r-card); background: var(--card); border: 1px solid var(--line); text-align: center; font-size: 12px; }
+  .day b { display: block; font-size: 18px; font-weight: 500; }
+  .day.on { background: var(--ink); color: #fff; border-color: var(--ink); }
+  .bar { position: fixed; left: 0; right: 0; bottom: 0; padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); background: #fff; border-top: 1px solid var(--line); }
+  .bar .in { max-width: 560px; margin: 0 auto; display: flex; gap: 10px; align-items: center; }
+  .bar .total { flex: 1; font-size: 12px; color: var(--muted); } .bar .total b { display: block; color: var(--ink); font-size: 15px; font-weight: 600; }
+  .bar .btn { min-width: 140px; }
+  .appt { margin-bottom: 10px; }
+  .appt .row { display: flex; justify-content: space-between; gap: 8px; align-items: flex-start; }
+  .appt .when { font-weight: 600; } .appt .what { color: var(--muted); font-size: 13px; margin: 4px 0 10px; }
+  .done { text-align: center; padding: 28px 8px; }
+  .done .tick { width: 64px; height: 64px; border-radius: 50%; background: #E9F8EE; display: grid; place-items: center; margin: 0 auto 16px; }
+  .done .tick .ic { width: 30px; height: 30px; stroke: #2FB26A; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <span class="brand" id="salon"><svg class="logo" viewBox="0 0 32 32" aria-hidden="true"><defs><linearGradient id="lg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#6F8BFF"/><stop offset="1" stop-color="#2F4BFF"/></linearGradient></defs><circle cx="16" cy="16" r="16" fill="url(#lg)"/><path d="M16 9.5c-1.7-1.4-5.7-1.7-6.5 1.9-.5 2.3.7 4 1.2 6.3.5 2.4.6 5.3 2.2 5.3 1.7 0 1.4-3.2 3.1-3.2s1.4 3.2 3.1 3.2c1.6 0 1.7-2.9 2.2-5.3.5-2.3 1.7-4 1.2-6.3-.8-3.6-4.8-3.3-6.5-1.9z" fill="#fff"/></svg><span id="salonName">Sergek Dent</span></span>
+    <div style="display:flex;gap:8px;align-items:center"><span id="lang"></span><button class="btn ghost hidden" id="logout" style="padding:8px 14px" data-i18n="Выйти">Выйти</button></div>
+  </header>
+  <nav class="tabs" aria-label="Разделы">
+    <a id="tab-book" data-i18n="Записаться">Записаться</a><a id="tab-my" data-i18n="Мои записи">Мои записи</a>
+  </nav>
+  <main id="view"></main>
+</div>
+<div class="bar hidden" id="bar"><div class="in"><div class="total" id="total"></div><button class="btn" id="next">Далее</button></div></div>
+
+<script src="/assets/common.js"></script>
+<script src="/assets/i18n.js"></script>
+<script>
+  const { $, esc, api, toast, fmtTime, fmtDay, money, statusChip, t } = SG;
+  SG.langSwitcher($("#lang"));
+  const slug = location.pathname.split("/")[2];
+  const base = `/api/public/${encodeURIComponent(slug)}`;
+  const view = $("#view"), bar = $("#bar");
+  const isMy = location.pathname.endsWith("/my");
+  let catalog, me = null;
+
+  $("#tab-book").href = `/b/${slug}`; $("#tab-my").href = `/b/${slug}/my`;
+  $(isMy ? "#tab-my" : "#tab-book").classList.add("on");
+
+  /* ---------- вход по коду из SMS (общий для записи и кабинета) ---------- */
+  function renderAuth(onDone) {
+    view.innerHTML = `<h1>${t("Подтвердите номер")}</h1><p class="sub">${t("Отправим код по SMS. Пароль не нужен.")}</p>
+      <div class="field"><label for="phone">${t("Телефон")}</label><input id="phone" type="tel" inputmode="tel" placeholder="+7 701 000 00 00" autocomplete="tel"></div>
+      <div class="field"><label for="fullName">${t("Ваше имя (если вы у нас впервые)")}</label><input id="fullName" autocomplete="name"></div>
+      <div class="field hidden" id="codeBox"><label for="code">${t("Код из SMS")}</label><input id="code" inputmode="numeric" maxlength="6" autocomplete="one-time-code"></div>
+      <p class="error" id="err" role="alert"></p>
+      <button class="btn block" id="go">${t("Получить код")}</button>`;
+    bar.classList.add("hidden");
+    let sent = false;
+    $("#go").onclick = async (e) => {
+      const err = $("#err"); err.textContent = ""; e.target.disabled = true;
+      try {
+        if (!sent) {
+          await api("/api/auth/client/request-otp", { method: "POST", body: { slug, phone: $("#phone").value } });
+          sent = true; $("#codeBox").classList.remove("hidden"); $("#code").focus();
+          e.target.textContent = t("Войти"); toast(t("Код отправлен"));
+        } else {
+          const r = await api("/api/auth/client/verify", { method: "POST", body: { slug, phone: $("#phone").value, code: $("#code").value, fullName: $("#fullName").value } });
+          me = { fullName: r.fullName }; showLogout(); onDone();
+        }
+      } catch (ex) {
+        err.textContent = ex.status === 429 ? t("Код уже отправлен. Подождите минуту.") : ex.status === 401 ? t("Неверный или просроченный код") : ex.message;
+      }
+      e.target.disabled = false;
+    };
+  }
+  function showLogout() { $("#logout").classList.remove("hidden"); }
+  $("#logout").onclick = async () => { await api("/api/auth/client/logout", { method: "POST" }); me = null; $("#logout").classList.add("hidden"); isMy ? renderMy() : startBooking(); };
+
+  /* ---------- запись: услуги → врач → время → подтверждение ---------- */
+  const order = { services: new Set(), master: null, date: SG.today(), slot: null, price: 0, duration: 0 };
+
+  function startBooking() { order.slot = null; stepServices(); }
+
+  function setBar(totalHtml, label, onNext, disabled) {
+    bar.classList.remove("hidden");
+    $("#total").innerHTML = totalHtml; $("#next").textContent = label; $("#next").disabled = !!disabled; $("#next").onclick = onNext;
+  }
+  const back = (fn) => `<button class="hint" style="margin-bottom:10px" id="back">← ${t("Назад")}</button>`;
+
+  function stepServices() {
+    const sel = [...order.services].map((id) => catalog.services.find((s) => s.id === id));
+    const sum = sel.reduce((s, x) => s + x.priceTenge, 0), min = sel.reduce((s, x) => s + x.durationMin, 0);
+    view.innerHTML = `<h1>${t("Выберите услуги")}</h1><p class="sub">${esc(catalog.name)}</p>` + catalog.services.map((s) =>
+      `<button class="opt ${order.services.has(s.id) ? "on" : ""}" data-id="${s.id}"><span>${esc(s.name)}<br><span class="hint">${s.durationMin} ${t("мин")}</span></span><span class="price">${money(s.priceTenge)}</span></button>`).join("");
+    setBar(sel.length ? `<b>${money(sum)}</b>${min} ${t("мин")}` : t("Ничего не выбрано"), t("Далее"), stepMaster, !sel.length);
+    view.onclick = (e) => { const b = e.target.closest("[data-id]"); if (!b) return; order.services.has(b.dataset.id) ? order.services.delete(b.dataset.id) : order.services.add(b.dataset.id); stepServices(); };
+  }
+
+  function stepMaster() {
+    view.innerHTML = `${back()}<h1>${t("Выберите врача")}</h1><p class="sub"> </p>` + catalog.masters.map((m) =>
+      `<button class="opt ${order.master === m.id ? "on" : ""}" data-m="${m.id}"><span>${esc(m.fullName)}</span></button>`).join("");
+    setBar("", t("Далее"), stepTime, !order.master);
+    $("#back").onclick = stepServices;
+    view.onclick = (e) => { const b = e.target.closest("[data-m]"); if (b) { order.master = b.dataset.m; order.slot = null; stepMaster(); } };
+  }
+
+  async function stepTime() {
+    const days = Array.from({ length: 14 }, (_, i) => SG.addDays(SG.today(), i));
+    view.innerHTML = `${back()}<h1>${t("Дата и время")}</h1><p class="sub"> </p>
+      <div class="days">${days.map((d) => `<button class="day ${d === order.date ? "on" : ""}" data-d="${d}">${new Intl.DateTimeFormat(SG.locale(), { weekday: "short" }).format(new Date(d + "T12:00:00Z"))}<b>${+d.slice(8)}</b></button>`).join("")}</div>
+      <div class="chips" id="slots"><span class="hint">${t("Загружаем…")}</span></div>`;
+    $("#back").onclick = stepMaster;
+    setBar("", t("Далее"), stepConfirm, !order.slot);
+    view.onclick = (e) => {
+      const d = e.target.closest("[data-d]"); if (d) { order.date = d.dataset.d; order.slot = null; return stepTime(); }
+      const s = e.target.closest("[data-slot]"); if (s) { order.slot = s.dataset.slot; $("#next").disabled = false; view.querySelectorAll("[data-slot]").forEach((x) => x.classList.toggle("on", x === s)); }
+    };
+    try {
+      const q = new URLSearchParams({ masterId: order.master, date: order.date, serviceIds: [...order.services].join(",") });
+      const r = await api(`${base}/slots?${q}`);
+      order.price = r.priceTenge; order.duration = r.durationMin;
+      $("#slots").innerHTML = r.slots.length ? r.slots.map((s) => `<button class="chip ${s === order.slot ? "on" : ""}" data-slot="${s}">${fmtTime(s)}</button>`).join("") : `<span class="hint">${t("В этот день свободного времени нет. Выберите другой.")}</span>`;
+    } catch (ex) { $("#slots").innerHTML = `<span class="error">${esc(ex.message)}</span>`; }
+  }
+
+  async function stepConfirm() {
+    const master = catalog.masters.find((m) => m.id === order.master);
+    const names = [...order.services].map((id) => catalog.services.find((s) => s.id === id).name).join(", ");
+    view.innerHTML = `${back()}<h1>${t("Проверьте запись")}</h1><p class="sub"> </p>
+      <div class="card"><b>${esc(fmtDay(order.slot))}, ${fmtTime(order.slot)}</b><p class="sub" style="margin:6px 0 0">${esc(names)}<br>${t("Врач")}: ${esc(master.fullName)}<br>${order.duration} ${t("мин")} · ${money(order.price)}</p></div>
+      <p class="error" id="err" role="alert" style="margin-top:12px"></p>`;
+    $("#back").onclick = stepTime;
+    setBar(`<b>${money(order.price)}</b>${order.duration} ${t("мин")}`, me ? t("Записаться") : t("Продолжить"), async () => {
+      if (!me) return renderAuth(stepConfirm); // после входа вернёмся сюда
+      book();
+    });
+  }
+
+  async function book() {
+    try {
+      await api(`${base}/book`, { method: "POST", body: { masterId: order.master, serviceIds: [...order.services], startsAt: order.slot } });
+      bar.classList.add("hidden");
+      view.innerHTML = `<div class="done"><div class="tick"><svg class="ic" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>
+        <h1>${t("Вы записаны")}</h1><p class="sub">${esc(fmtDay(order.slot))}, ${fmtTime(order.slot)}</p>
+        <a class="btn block" style="display:block;text-decoration:none;text-align:center" href="/b/${esc(slug)}/my">${t("Мои записи")}</a></div>`;
+      order.services.clear(); order.master = null; order.slot = null;
+    } catch (ex) {
+      toast(ex.status === 409 ? t("Это время уже занято, выберите другое") : ex.message);
+      if (ex.status === 409) { order.slot = null; stepTime(); }
+      else stepConfirm();
+    }
+  }
+
+  /* ---------- кабинет ---------- */
+  async function renderMy() {
+    bar.classList.add("hidden");
+    if (!me) return renderAuth(renderMy);
+    const { items } = await api("/api/my/appointments");
+    const now = Date.now();
+    view.innerHTML = `<h1>${t("Привет")}, ${esc(me.fullName.split(" ")[0])}</h1><p class="sub">${t("Ваши записи")}</p>` + (items.length ? items.map((a) => {
+      const canCancel = ["booked", "confirmed"].includes(a.status) && new Date(a.startsAt) - now >= 2 * 3600e3;
+      return `<article class="card appt"><div class="row"><span class="when">${esc(fmtDay(a.startsAt))}, ${fmtTime(a.startsAt)}</span>${statusChip(a.status)}</div>
+        <div class="what">${a.toothName ? `${esc(a.toothName)}<br>` : ""}${esc(a.services)} · ${esc(a.masterName)} · ${money(a.priceTenge)}</div>
+        ${canCancel ? `<button class="btn danger" data-cancel="${a.id}">${t("Отменить запись")}</button>` : ""}</article>`;
+    }).join("") : `<p class="empty">${t("Записей пока нет")}</p>`);
+    const tg = await api("/api/my/telegram").catch(() => null);
+    if (tg?.enabled) {
+      view.insertAdjacentHTML("beforeend", `<div class="card" style="margin-top:14px"><b>${t("Напоминания в Telegram")}</b>
+        <p class="sub" style="margin:4px 0 12px">${t("Напомним о визите и дадим отменить запись одной кнопкой")}</p>
+        ${tg.linked ? `<span class="status paid">${t("Telegram подключён")}</span>` : `<button class="btn block" id="tg">${t("Подключить Telegram")}</button>`}</div>`);
+      $("#tg")?.addEventListener("click", async () => { const r = await api("/api/my/telegram/link", { method: "POST" }); window.open(r.url, "_blank", "noopener"); });
+    }
+    view.onclick = async (e) => {
+      const b = e.target.closest("[data-cancel]"); if (!b || !confirm(t("Отменить запись?"))) return;
+      try { await api(`/api/my/appointments/${b.dataset.cancel}/cancel`, { method: "POST" }); toast(t("Запись отменена")); renderMy(); } catch (ex) { toast(ex.message); }
+    };
+  }
+
+  /* ---------- старт ---------- */
+  (async () => {
+    try { catalog = await api(base); } catch { view.innerHTML = `<p class="empty">${t("Клиника не найдена")}</p>`; return; }
+    $("#salonName").textContent = catalog.name; document.title = `${catalog.name} — онлайн-запись`;
+    try { me = await api("/api/my/me"); showLogout(); } catch { /* не вошёл */ }
+    isMy ? renderMy() : startBooking();
+  })();
+</script>
+</body>
+</html>

@@ -1,0 +1,21 @@
+{
+  "name": "sergek-dent",
+  "private": true,
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "npm run start -w @salon/api",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.0",
+    "vitest": "^2.1.0"
+  },
+  "dependencies": {
+    "@electric-sql/pglite": "^0.5.11",
+    "fastify": "^5.12.7",
+    "tsx": "^4.23.15"
+  }
+}

@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sergek Dent — панель управления</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/ui.css">
+<style>
+/* ==========================================================================
+   Токены экрана (общие лежат в /assets/ui.css)
+   ========================================================================== */
+:root {
+  --row-h: 44px;
+  --sel: #F3F5FF;            /* фон выбранной строки */
+}
+
+/* ==========================================================================
+   База
+   ========================================================================== */
+body { font-size: 13px; min-height: 100vh; }
+button:disabled { cursor: default; }
+
+/* Каскадное появление: задержка = --i * 40мс. fill-mode backwards, чтобы hover работал после анимации. */
+@keyframes rise { from { opacity: 0; transform: translateY(8px); } }
+@keyframes slide-in { from { opacity: 0; transform: translateX(-8px); } }
+@keyframes menu-in { from { opacity: 0; transform: translateY(-4px) scale(.97); } }
+
+/* ==========================================================================
+   Раскладка: сайдбар 180px + основная область
+   ========================================================================== */
+.app { display: grid; grid-template-columns: 180px minmax(0, 1fr); min-height: 100vh; }
+.main { min-width: 0; display: flex; flex-direction: column; }
+
+/* ==========================================================================
+   Сайдбар
+   ========================================================================== */
+.side { position: sticky; top: 0; height: 100vh; display: flex; flex-direction: column; padding: 16px 12px; background: var(--side); animation: slide-in .45s var(--ease) backwards; }
+.brand { display: flex; align-items: center; gap: 10px; padding: 2px 6px 16px; margin-bottom: 14px; color: #fff; font-size: 15px; font-weight: 600; border-bottom: 1px solid rgba(255,255,255,.15); }
+.nav { position: relative; flex: 1; display: flex; flex-direction: column; gap: 2px; }
+/* Подсветка активного пункта «перетекает» к выбранному (позиция задаётся из JS) */
+.nav-hl { position: absolute; left: 0; top: 0; width: 100%; height: 36px; border-radius: var(--r-ctl); background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.12); transition: transform .45s var(--ease), height .3s var(--ease); pointer-events: none; }
+.nav-item { position: relative; z-index: 1; display: flex; align-items: center; gap: 10px; width: 100%; height: 36px; padding: 0 10px; border-radius: var(--r-ctl); font-size: 13px; color: rgba(255,255,255,.75); text-align: left; transition: color .25s var(--ease); }
+/* Фон при hover — отдельным слоем, чтобы плавно проявлялся */
+.nav-item::before { content: ""; position: absolute; inset: 0; z-index: -1; border-radius: inherit; background: rgba(255,255,255,.05); opacity: 0; transition: opacity .25s var(--ease); }
+.nav-item:hover::before { opacity: 1; }
+.nav-item:hover, .nav-item.active { color: #fff; }
+.nav-item:focus-visible { outline-color: #fff; outline-offset: -2px; }
+.nav-item .ic { width: 18px; height: 18px; }
+.nav-gap { flex: 1; }
+
+/* ==========================================================================
+   Топбар
+   ========================================================================== */
+.topbar { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 14px 32px; border-bottom: 1px solid var(--line); }
+.search { position: relative; display: flex; align-items: center; width: 235px; height: 36px; padding: 0 12px; gap: 8px; background: #fff; border: 1px solid var(--field-line); border-radius: var(--r-ctl); transition: border-color .25s var(--ease), box-shadow .25s var(--ease); }
+.search:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-ring); }
+.search .ic { width: 16px; height: 16px; color: var(--muted); }
+.search .sep { width: 1px; height: 16px; background: var(--line); }
+.search input { flex: 1; min-width: 0; border: 0; outline: 0; background: none; font-size: 13px; }
+.search input::placeholder { color: var(--muted); }
+.user { display: flex; align-items: center; gap: 10px; }
+.sq-btn { width: 36px; height: 36px; display: grid; place-items: center; border: 1px solid var(--field-line); border-radius: var(--r-ctl); background: #fff; transition: transform .2s var(--ease), box-shadow .2s var(--ease), background .2s var(--ease); }
+.sq-btn:hover { transform: translateY(-1px); box-shadow: var(--shadow-lift); background: var(--hover); }
+.sq-btn:active { transform: scale(.97); }
+.sq-btn .ic { width: 16px; height: 16px; }
+.me { display: flex; align-items: center; gap: 8px; padding: 2px 6px 2px 2px; border-radius: var(--r-ctl); transition: background .2s var(--ease); }
+.me:hover { background: var(--hover); }
+.me .avatar { width: 32px; height: 32px; font-size: 12px; }
+.me b { font-weight: 500; font-size: 13px; }
+.me .ic { width: 14px; height: 14px; color: var(--muted); }
+
+/* ==========================================================================
+   Заголовок и сводка
+   ========================================================================== */
+.content { padding: 0 32px 24px; }
+.page-head { display: flex; align-items: center; gap: 12px; padding: 20px 0 14px; border-bottom: 1px solid var(--line); }
+.page-head h1 { font-size: 20px; font-weight: 600; }
+.sel-count { font-size: 12px; color: var(--accent-dark); background: var(--accent-soft); border-radius: var(--r-pill); padding: 3px 10px; animation: rise .3s var(--ease); }
+.kpis-row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-bottom: 1px solid var(--line); }
+.kpi-cell { padding: 12px 16px 12px 0; }
+.kpi-cell + .kpi-cell { padding-left: 16px; border-left: 1px solid var(--line); }
+.kpi-cell span { display: block; font-size: 11px; font-weight: 500; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+.kpi-cell b { display: block; margin-top: 2px; font-size: 20px; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+/* ==========================================================================
+   Тулбар
+   ========================================================================== */
+.toolbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; padding: 14px 0; }
+.tools { display: flex; gap: 8px; position: relative; }
+.tbtn { display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 14px; border-radius: var(--r-ctl); border: 1px solid var(--field-line); background: #fff; font-size: 13px; font-weight: 500; white-space: nowrap; transition: transform .2s var(--ease), box-shadow .2s var(--ease), background .2s var(--ease); }
+.tbtn:hover { transform: translateY(-1px); box-shadow: var(--shadow-lift); }
+.tbtn:active { transform: scale(.97); }
+.tbtn .ic { width: 16px; height: 16px; }
+.tbtn.soft { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+.tbtn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.tbtn.primary:hover { background: var(--accent-dark); border-color: var(--accent-dark); }
+.badge { min-width: 18px; height: 18px; padding: 0 5px; display: inline-grid; place-items: center; border-radius: var(--r-pill); background: var(--ink); color: #fff; font-size: 11px; }
+
+/* Выпадающие меню: фильтр, действия строки, профиль */
+.menu { position: absolute; z-index: 30; min-width: 220px; padding: 6px; background: #fff; border: 1px solid var(--line); border-radius: var(--r-ctl); box-shadow: 0 10px 28px rgba(17,17,17,.12); transform-origin: top right; animation: menu-in .2s var(--ease); }
+.menu[hidden] { display: none; }
+.menu h3 { padding: 8px 10px 4px; font-size: 11px; font-weight: 500; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+.menu button, .menu a { display: flex; align-items: center; gap: 8px; width: 100%; padding: 8px 10px; border-radius: 8px; font-size: 13px; text-align: left; text-decoration: none; color: var(--ink); transition: background .15s var(--ease); }
+.menu button:hover, .menu a:hover { background: var(--hover); }
+.menu button[aria-checked="true"] { font-weight: 600; }
+.menu button[aria-checked="true"]::after { content: ""; margin-left: auto; width: 6px; height: 6px; border-radius: 50%; background: var(--ink); }
+.menu button.danger { color: var(--danger); }
+.menu button:disabled { opacity: .4; }
+.menu .ic { width: 16px; height: 16px; }
+.menu hr { border: 0; border-top: 1px solid var(--line); margin: 6px 0; }
+#filterMenu { right: 0; top: 42px; }
+.fixed-menu { position: fixed; min-width: 160px; transform-origin: top right; }
+
+/* ==========================================================================
+   Таблица
+   ========================================================================== */
+.table-wrap { overflow-x: auto; border-top: 1px solid var(--row-line); scrollbar-width: thin; scrollbar-color: #C9C9D1 transparent; }
+.table-wrap::-webkit-scrollbar { height: 6px; }
+.table-wrap::-webkit-scrollbar-thumb { background: #C9C9D1; border-radius: 3px; }
+table { width: 100%; border-collapse: collapse; min-width: 1040px; }
+thead th { height: 40px; padding: 0 10px; text-align: left; font-size: 11px; font-weight: 500; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; white-space: nowrap; background: #fff; }
+tbody td { height: var(--row-h); padding: 0 10px; border-top: 1px solid var(--row-line); color: var(--muted); white-space: nowrap; background: var(--row-bg, #fff); transition: background .2s var(--ease); }
+tbody tr { --row-bg: #fff; animation: rise .45s var(--ease) backwards; animation-delay: calc(var(--i, 0) * 40ms); }
+tbody tr:hover { --row-bg: var(--hover); }
+tbody tr.sel { --row-bg: var(--sel); }
+tbody { transition: opacity .18s var(--ease); }
+tbody.is-out { opacity: 0; }
+th.c-cb, td.c-cb { width: 40px; padding-right: 0; }
+.veh { color: var(--ink); font-weight: 500; margin-right: 6px; }
+.dim { color: var(--muted); }
+.cell-trunc { display: block; max-width: 190px; overflow: hidden; text-overflow: ellipsis; }
+/* Последняя колонка закреплена справа */
+th.c-act, td.c-act { position: sticky; right: 0; width: 56px; padding: 0 8px; text-align: center; border-left: 1px solid var(--row-line); }
+thead th.c-act { background: #fff; }
+.dots { width: 28px; height: 28px; display: inline-grid; place-items: center; border-radius: 50%; opacity: 0; transition: opacity .2s var(--ease), background .2s var(--ease); }
+tbody tr:hover .dots, .dots:focus-visible, .dots[aria-expanded="true"] { opacity: 1; }
+.dots:hover, .dots[aria-expanded="true"] { background: var(--stone); }
+.dots .ic { width: 16px; height: 16px; fill: currentColor; stroke: none; color: var(--ink); }
+@media (hover: none) { .dots { opacity: 1; } }
+.empty-row td { height: 120px; text-align: center; background: #fff; }
+
+/* Чекбокс: заливка чёрным и рисующаяся галочка */
+.cb { position: relative; display: inline-block; width: 14px; height: 14px; vertical-align: middle; cursor: pointer; }
+.cb input { position: absolute; inset: -6px; width: 26px; height: 26px; margin: 0; opacity: 0; cursor: pointer; }
+.cb .box { position: absolute; inset: 0; border: 1px solid #C4C4CC; border-radius: 3px; background: #fff; transition: background .2s var(--ease), border-color .2s var(--ease); }
+.cb .box svg { width: 14px; height: 14px; fill: none; stroke: #fff; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.cb .box path { stroke-dasharray: 14; stroke-dashoffset: 14; transition: stroke-dashoffset .3s var(--ease); }
+.cb input:checked + .box, .cb input:indeterminate + .box { background: var(--ink); border-color: var(--ink); }
+.cb input:checked + .box path { stroke-dashoffset: 0; }
+.cb input:indeterminate + .box::after { content: ""; position: absolute; left: 3px; right: 3px; top: 50%; height: 2px; margin-top: -1px; background: #fff; border-radius: 1px; }
+.cb input:focus-visible + .box { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* ==========================================================================
+   Футер с пагинацией
+   ========================================================================== */
+.foot { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; padding-top: 14px; }
+.foot .info { color: var(--muted); }
+.pager { display: flex; gap: 8px; }
+.pbtn { display: inline-flex; align-items: center; gap: 4px; height: 36px; padding: 0 14px; border: 1px solid var(--field-line); border-radius: 8px; background: #fff; font-size: 13px; font-weight: 500; transition: transform .2s var(--ease), box-shadow .2s var(--ease), background .2s var(--ease); }
+.pbtn:hover:not(:disabled) { transform: translateY(-1px); box-shadow: var(--shadow-lift); }
+.pbtn:active:not(:disabled) { transform: scale(.97); }
+.pbtn:disabled { opacity: .4; }
+.pbtn .ic { width: 14px; height: 14px; }
+
+/* ==========================================================================
+   Разделы, которые рисует pages.js
+   ========================================================================== */
+#page-other { display: block; }
+
+/* ==========================================================================
+   Адаптив до планшета
+   ========================================================================== */
+@media (max-width: 1000px) {
+  .app { grid-template-columns: 64px minmax(0, 1fr); }
+  .side { padding: 16px 10px; }
+  .brand { justify-content: center; padding-left: 0; padding-right: 0; }
+  .brand span, .nav-item span { display: none; }
+  .nav-item { justify-content: center; padding: 0; }
+  .topbar, .content { padding-left: 20px; padding-right: 20px; }
+  .me b { display: none; }
+  .kpis-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .kpi-cell:nth-child(3) { padding-left: 0; border-left: 0; }
+  .kpi-cell:nth-child(n+3) { border-top: 1px solid var(--line); }
+}
+@media (max-width: 760px) { .search { width: 100%; } .topbar { flex-wrap: wrap; } }
+
+/* ==========================================================================
+   prefers-reduced-motion: отключаем все анимации
+   ========================================================================== */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition-duration: .01ms !important; }
+  .tbtn:hover, .sq-btn:hover, .pbtn:hover, .btn:hover { transform: none; }
+}
+</style>
+</head>
+<body>
+
+<!-- Набор иконок (inline SVG sprite) -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-list" viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4h6v3H9z"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="13" y2="16"/></symbol>
+  <symbol id="i-calendar" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></symbol>
+  <symbol id="i-users" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
+  <symbol id="i-car" viewBox="0 0 24 24"><path d="M5 17H3v-5l2-5.5A2 2 0 0 1 6.9 5h10.2A2 2 0 0 1 19 6.5L21 12v5h-2"/><circle cx="7.5" cy="17" r="2"/><circle cx="16.5" cy="17" r="2"/><line x1="9.5" y1="17" x2="14.5" y2="17"/><line x1="3" y1="12" x2="21" y2="12"/></symbol>
+  <symbol id="i-wrench" viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></symbol>
+  <symbol id="i-usercheck" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><polyline points="17 11 19 13 23 9"/></symbol>
+  <symbol id="i-wallet" viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="14" rx="2"/><path d="M3 10h18"/><circle cx="16.5" cy="15" r="1"/></symbol>
+  <symbol id="i-home" viewBox="0 0 24 24"><rect x="3" y="3" width="7.5" height="9" rx="1.5"/><rect x="13.5" y="3" width="7.5" height="5" rx="1.5"/><rect x="13.5" y="11" width="7.5" height="10" rx="1.5"/><rect x="3" y="15" width="7.5" height="6" rx="1.5"/></symbol>
+  <symbol id="i-chart" viewBox="0 0 24 24"><line x1="5" y1="20" x2="5" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="19" y1="20" x2="19" y2="13"/></symbol>
+  <symbol id="i-settings" viewBox="0 0 24 24"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></symbol>
+  <symbol id="i-logout" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></symbol>
+  <symbol id="i-bell" viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></symbol>
+  <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></symbol>
+  <symbol id="i-down" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></symbol>
+  <symbol id="i-left" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></symbol>
+  <symbol id="i-right" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></symbol>
+  <symbol id="i-filter" viewBox="0 0 24 24"><polygon points="3 4 21 4 14 12.5 14 20 10 18 10 12.5"/></symbol>
+  <symbol id="i-download" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></symbol>
+  <symbol id="i-dots" viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="12" cy="19" r="1.7"/></symbol>
+  <symbol id="i-eye" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></symbol>
+  <symbol id="i-pencil" viewBox="0 0 24 24"><path d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></symbol>
+</svg>
+
+<div class="app">
+
+  <!-- ===================== САЙДБАР ===================== -->
+  <aside class="side">
+    <div class="brand">
+      <svg class="logo" viewBox="0 0 32 32" aria-hidden="true"><defs><linearGradient id="lg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#6F8BFF"/><stop offset="1" stop-color="#2F4BFF"/></linearGradient></defs><circle cx="16" cy="16" r="16" fill="url(#lg)"/><path d="M16 9.5c-1.7-1.4-5.7-1.7-6.5 1.9-.5 2.3.7 4 1.2 6.3.5 2.4.6 5.3 2.2 5.3 1.7 0 1.4-3.2 3.1-3.2s1.4 3.2 3.1 3.2c1.6 0 1.7-2.9 2.2-5.3.5-2.3 1.7-4 1.2-6.3-.8-3.6-4.8-3.3-6.5-1.9z" fill="#fff"/></svg>
+      <span>Sergek Dent</span>
+    </div>
+
+    <nav class="nav" id="nav" aria-label="Главное меню">
+      <div class="nav-hl" id="navHl" aria-hidden="true"></div>
+      <button class="nav-item active" data-page="overview" aria-label="Обзор"><svg class="ic"><use href="#i-home"/></svg><span>Обзор</span></button>
+      <button class="nav-item" data-page="dashboard" aria-label="Записи"><svg class="ic"><use href="#i-list"/></svg><span>Записи</span></button>
+      <button class="nav-item" data-page="calendar" aria-label="Календарь"><svg class="ic"><use href="#i-calendar"/></svg><span>Календарь</span></button>
+      <button class="nav-item" data-page="clients" aria-label="Пациенты"><svg class="ic"><use href="#i-users"/></svg><span>Пациенты</span></button>
+      <button class="nav-item" data-page="services" aria-label="Услуги"><svg class="ic"><use href="#i-wrench"/></svg><span>Услуги</span></button>
+      <button class="nav-item" data-page="masters" aria-label="Врачи и график"><svg class="ic"><use href="#i-usercheck"/></svg><span>Врачи</span></button>
+      <button class="nav-item" data-page="cash" aria-label="Касса и зарплата"><svg class="ic"><use href="#i-wallet"/></svg><span>Касса</span></button>
+      <button class="nav-item" data-page="reports" aria-label="Отчёты"><svg class="ic"><use href="#i-chart"/></svg><span>Отчёты</span></button>
+      <div class="nav-gap"></div>
+      <button class="nav-item" data-page="settings" aria-label="Настройки"><svg class="ic"><use href="#i-settings"/></svg><span>Настройки</span></button>
+      <button class="nav-item" data-page="logout" aria-label="Выйти"><svg class="ic"><use href="#i-logout"/></svg><span>Выйти</span></button>
+    </nav>
+  </aside>
+
+  <!-- ===================== ОСНОВНАЯ ОБЛАСТЬ ===================== -->
+  <div class="main">
+
+    <header class="topbar">
+      <label class="search">
+        <svg class="ic" aria-hidden="true"><use href="#i-search"/></svg><span class="sep" aria-hidden="true"></span>
+        <span class="sr-only">Поиск</span>
+        <input type="search" id="topSearch" placeholder="Поиск пациентов, зубов, услуг" autocomplete="off">
+      </label>
+      <div class="user">
+        <button class="sq-btn" id="bellBtn" aria-label="Уведомления: записи, ожидающие подтверждения"><svg class="ic"><use href="#i-bell"/></svg></button>
+        <button class="sq-btn" id="pubBtn" aria-label="Открыть страницу онлайн-записи"><svg class="ic"><use href="#i-globe"/></svg></button>
+        <div style="position:relative">
+          <button class="me" id="meBtn" aria-haspopup="true" aria-expanded="false">
+            <span class="avatar" id="meAvatar" aria-hidden="true"></span>
+            <b id="meName">…</b>
+            <svg class="ic" aria-hidden="true"><use href="#i-down"/></svg>
+          </button>
+          <div class="menu" id="meMenu" hidden style="right:0;top:42px">
+            <h3 id="meRole"></h3>
+            <button id="meLogout"><svg class="ic"><use href="#i-logout"/></svg>Выйти</button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main class="content">
+
+      <!-- ============ Экран «Записи» ============ -->
+      <div id="page-dashboard" class="hidden">
+        <div class="page-head">
+          <h1>Записи</h1>
+          <span class="sel-count" id="selCount" role="status" hidden></span>
+        </div>
+
+        <section class="kpis-row" aria-label="Сводка">
+          <div class="kpi-cell"><span>Записей сегодня</span><b data-stat="appointmentsToday">–</b></div>
+          <div class="kpi-cell"><span>На приёме сейчас</span><b data-stat="inProgress">–</b></div>
+          <div class="kpi-cell"><span>Пациентов</span><b data-stat="clients">–</b></div>
+          <div class="kpi-cell"><span>Врачей</span><b data-stat="masters">–</b></div>
+        </section>
+
+        <div class="toolbar">
+          <label class="search">
+            <svg class="ic" aria-hidden="true"><use href="#i-search"/></svg><span class="sep" aria-hidden="true"></span>
+            <span class="sr-only">Поиск по записям</span>
+            <input type="search" id="tableSearch" placeholder="Поиск по записям" autocomplete="off">
+          </label>
+          <div class="tools">
+            <button class="tbtn" id="filterBtn" aria-haspopup="true" aria-expanded="false"><svg class="ic"><use href="#i-filter"/></svg>Фильтр<span class="badge" id="filterBadge" hidden>0</span></button>
+            <button class="tbtn soft" id="exportBtn"><svg class="ic"><use href="#i-download"/></svg>Экспорт</button>
+            <button class="tbtn primary" id="newAppt"><svg class="ic"><use href="#i-plus"/></svg>Новая запись</button>
+
+            <!-- Меню фильтра: период и статус -->
+            <div class="menu" id="filterMenu" role="menu" aria-label="Фильтр записей" hidden>
+              <h3>Показать</h3>
+              <button role="menuitemradio" data-tab="upcoming" aria-checked="true">Предстоящие</button>
+              <button role="menuitemradio" data-tab="all" aria-checked="false">Все записи</button>
+              <button role="menuitemradio" data-tab="cancelled" aria-checked="false">Отменённые</button>
+              <hr>
+              <h3>Статус</h3>
+              <div id="statusItems"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="table-wrap" tabindex="0" aria-label="Таблица записей">
+          <table>
+            <thead>
+              <tr>
+                <th class="c-cb"><label class="cb"><input type="checkbox" id="selAll" aria-label="Выбрать все записи"><span class="box"><svg viewBox="0 0 14 14"><path d="M3 7.5l2.6 2.6L11 4.5"/></svg></span></label></th>
+                <th>Зуб</th><th>Статус</th><th>Услуги</th><th>Время</th><th>Пациент</th><th>Врач</th><th>Сумма</th><th>Приём №</th>
+                <th class="c-act"><span class="sr-only">Действия</span></th>
+              </tr>
+            </thead>
+            <tbody id="rows"></tbody>
+          </table>
+        </div>
+
+        <footer class="foot">
+          <span class="info" id="count" aria-live="polite"></span>
+          <div class="pager">
+            <button class="pbtn" id="prev"><svg class="ic"><use href="#i-left"/></svg>Назад</button>
+            <button class="pbtn" id="next">Вперёд<svg class="ic"><use href="#i-right"/></svg></button>
+          </div>
+        </footer>
+      </div>
+
+      <!-- Остальные разделы рисуются из /admin/pages.js -->
+      <div id="page-other"></div>
+    </main>
+  </div>
+</div>
+
+<!-- Меню действий строки: просмотр, изменение статуса, отмена -->
+<div class="menu fixed-menu" id="rowMenu" role="menu" aria-label="Действия с записью" hidden>
+  <button role="menuitem" data-act="view"><svg class="ic"><use href="#i-eye"/></svg>Просмотр</button>
+  <button role="menuitem" data-act="edit"><svg class="ic"><use href="#i-pencil"/></svg>Изменить статус</button>
+  <button role="menuitem" data-act="cancel" class="danger"><svg class="ic"><use href="#i-x"/></svg>Отменить</button>
+</div>
+
+<div class="toast" id="toast" role="status"></div>
+
+<script src="/assets/common.js"></script>
+<script src="/assets/booking-dialog.js"></script>
+<script src="/admin/pages.js"></script>
+<script>
+/* ==========================================================================
+   Утилиты
+   ========================================================================== */
+const { $, $$, esc, initials, money, statusChip, toothLabel } = SG;
+const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+// Узкий экран получает отдельную мобильную версию.
+if (matchMedia("(max-width: 760px)").matches && !location.search.includes("desktop")) location.replace("/admin/m");
+const toLogin = () => location.replace("/login");
+const get = (url) => SG.api(url, { on401: toLogin });
+const toast = SG.toast;
+
+/** «4 ноя 2026, 11:00» в часовом поясе СТО. */
+function fmtWhen(iso) {
+  const p = Object.fromEntries(
+    new Intl.DateTimeFormat("ru-RU", { timeZone: "Asia/Almaty", year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false })
+      .formatToParts(new Date(iso)).map((x) => [x.type, x.value]));
+  return `${p.day} ${p.month.replace(".", "")} ${p.year}, ${p.hour}:${p.minute}`;
+}
+/** Номер приёма: короткий код из id записи. */
+const orderNo = (id) => "ПР-" + id.slice(0, 6).toUpperCase();
+
+/* ==========================================================================
+   Сайдбар: подсветка перетекает к активному пункту
+   ========================================================================== */
+const hl = $("#navHl");
+function moveHighlight() {
+  const item = $(".nav-item.active");
+  hl.style.height = item.offsetHeight + "px";
+  hl.style.transform = `translateY(${item.offsetTop}px)`;
+}
+function setActive(btn) {
+  $$(".nav-item").forEach((b) => {
+    b.classList.toggle("active", b === btn);
+    b === btn ? b.setAttribute("aria-current", "page") : b.removeAttribute("aria-current");
+  });
+  moveHighlight();
+}
+$$(".nav-item").forEach((btn) => btn.addEventListener("click", () => {
+  if (btn.dataset.page === "logout") return logout();
+  setActive(btn);
+  showPage(btn.dataset.page);
+}));
+addEventListener("resize", moveHighlight);
+const logout = () => SG.api("/api/auth/logout", { method: "POST" }).then(toLogin);
+
+/* ==========================================================================
+   Сводка
+   ========================================================================== */
+async function loadStats() {
+  const data = await get("/api/staff/dashboard");
+  $$("[data-stat]").forEach((el) => { el.textContent = data[el.dataset.stat] ?? 0; });
+}
+
+/* ==========================================================================
+   Таблица записей
+   ========================================================================== */
+const PAGE_SIZE = 10;
+const state = { tab: "upcoming", status: "", page: 1, q: "" };
+const selected = new Set();
+let requestId = 0, byId = {}, total = 0;
+const rows = $("#rows");
+
+const CHECK = `<svg viewBox="0 0 14 14"><path d="M3 7.5l2.6 2.6L11 4.5"/></svg>`;
+
+function rowHtml(a, i) {
+  return `<tr data-id="${esc(a.id)}" class="${selected.has(a.id) ? "sel" : ""}" style="--i:${i}">
+    <td class="c-cb"><label class="cb"><input type="checkbox" data-sel ${selected.has(a.id) ? "checked" : ""} aria-label="Выбрать запись: ${esc(a.clientName)}"><span class="box">${CHECK}</span></label></td>
+    <td>${a.toothName ? `<span class="veh">${esc(a.toothName)}</span><span class="dx">${esc(a.toothDiagnosis)}</span>` : `<span class="dim">Без привязки к зубу</span>`}</td>
+    <td>${statusChip(a.status)}</td>
+    <td><span class="cell-trunc" title="${esc(a.services)}">${esc(a.services)}</span></td>
+    <td>${fmtWhen(a.startsAt)}</td>
+    <td>${esc(a.clientName)}</td>
+    <td>${esc(a.masterName)}</td>
+    <td>${money(a.priceTenge)}</td>
+    <td>${orderNo(a.id)}</td>
+    <td class="c-act"><button class="dots" aria-label="Действия с записью: ${esc(a.clientName)}" aria-haspopup="true" aria-expanded="false"><svg class="ic"><use href="#i-dots"/></svg></button></td>
+  </tr>`;
+}
+
+function queryString(page, pageSize) {
+  return new URLSearchParams({ tab: state.tab, status: state.status, page, pageSize, q: state.q });
+}
+
+async function loadTable() {
+  const id = ++requestId;
+  rows.classList.add("is-out");                              // плавно гасим старые строки
+  const [res] = await Promise.all([
+    get("/api/staff/appointments?" + queryString(state.page, PAGE_SIZE)),
+    new Promise((r) => setTimeout(r, reduceMotion ? 0 : 160)),
+  ]);
+  if (id !== requestId) return;                              // пришёл более новый запрос
+
+  total = res.total;
+  byId = Object.fromEntries(res.items.map((a) => [a.id, a]));
+  for (const sid of [...selected]) if (!byId[sid]) selected.delete(sid);
+  rows.innerHTML = res.items.length
+    ? res.items.map(rowHtml).join("")
+    : `<tr class="empty-row"><td colspan="10">Ничего не найдено</td></tr>`;
+  rows.classList.remove("is-out");
+
+  const from = total ? (state.page - 1) * PAGE_SIZE + 1 : 0;
+  $("#count").textContent = total ? `Показано ${from} – ${from + res.items.length - 1} из ${total} записей` : "";
+  $("#prev").disabled = state.page <= 1;
+  $("#next").disabled = state.page * PAGE_SIZE >= total;
+  syncSelection();
+}
+
+$("#prev").addEventListener("click", () => { state.page--; selected.clear(); loadTable(); });
+$("#next").addEventListener("click", () => { state.page++; selected.clear(); loadTable(); });
+
+/* --- Выбор строк: чекбокс в шапке выбирает все, счётчик рядом с заголовком --- */
+function syncSelection() {
+  const ids = Object.keys(byId);
+  const all = $("#selAll");
+  all.checked = ids.length > 0 && ids.every((id) => selected.has(id));
+  all.indeterminate = !all.checked && selected.size > 0;
+  const badge = $("#selCount");
+  badge.hidden = selected.size === 0;
+  badge.textContent = `Выбрано: ${selected.size}`;
+}
+$("#selAll").addEventListener("change", (e) => {
+  Object.keys(byId).forEach((id) => (e.target.checked ? selected.add(id) : selected.delete(id)));
+  $$("tr[data-id]", rows).forEach((tr) => {
+    tr.classList.toggle("sel", e.target.checked);
+    tr.querySelector("[data-sel]").checked = e.target.checked;
+  });
+  syncSelection();
+});
+rows.addEventListener("change", (e) => {
+  const cb = e.target.closest("[data-sel]");
+  if (!cb) return;
+  const tr = cb.closest("tr");
+  cb.checked ? selected.add(tr.dataset.id) : selected.delete(tr.dataset.id);
+  tr.classList.toggle("sel", cb.checked);
+  syncSelection();
+});
+
+/* --- Живой поиск: верхнее и табличное поле связаны, запрос с задержкой 250 мс --- */
+let searchTimer;
+function onSearch(value) {
+  $("#topSearch").value = $("#tableSearch").value = value;
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => {
+    state.q = value.trim(); state.page = 1; selected.clear();
+    if (!$("#page-dashboard").classList.contains("hidden")) loadTable(); else goDashboard();
+  }, 250);
+}
+$("#topSearch").addEventListener("input", (e) => onSearch(e.target.value));
+$("#tableSearch").addEventListener("input", (e) => onSearch(e.target.value));
+
+/* ==========================================================================
+   Меню: открытие, закрытие, клавиатура
+   ========================================================================== */
+const menus = [];
+function bindMenu(menu, button) {
+  menus.push({ menu, button });
+  return {
+    open() { closeMenus(); menu.hidden = false; button?.setAttribute("aria-expanded", "true"); menu.querySelector("button:not(:disabled)")?.focus(); },
+    close() { menu.hidden = true; button?.setAttribute("aria-expanded", "false"); },
+  };
+}
+function closeMenus() { menus.forEach(({ menu, button }) => { menu.hidden = true; button?.setAttribute("aria-expanded", "false"); }); }
+document.addEventListener("click", (e) => {
+  if (!e.target.closest(".menu") && !e.target.closest("[aria-haspopup]")) closeMenus();
+});
+document.addEventListener("keydown", (e) => {
+  if (e.key !== "Escape") return;
+  const open = menus.find(({ menu }) => !menu.hidden);
+  closeMenus();
+  open?.button?.focus();
+});
+addEventListener("resize", closeMenus);
+
+/* --- Фильтр --- */
+const filter = bindMenu($("#filterMenu"), $("#filterBtn"));
+$("#statusItems").innerHTML = [["", "Все статусы"], ...Object.entries(SG.STATUS)]
+  .map(([k, label]) => `<button role="menuitemradio" data-status="${k}" aria-checked="${k === ""}">${esc(label)}</button>`).join("");
+$("#filterBtn").addEventListener("click", () => ($("#filterMenu").hidden ? filter.open() : filter.close()));
+$("#filterMenu").addEventListener("click", (e) => {
+  const b = e.target.closest("[data-tab], [data-status]");
+  if (!b) return;
+  if (b.dataset.tab !== undefined) state.tab = b.dataset.tab;
+  if (b.dataset.status !== undefined) {
+    state.status = b.dataset.status;
+    if (state.status && state.tab === "upcoming") state.tab = "all"; // «Предстоящие» показывают только записанных и подтверждённых
+  }
+  $$("[data-tab]", $("#filterMenu")).forEach((x) => x.setAttribute("aria-checked", String(x.dataset.tab === state.tab)));
+  $$("[data-status]", $("#filterMenu")).forEach((x) => x.setAttribute("aria-checked", String(x.dataset.status === state.status)));
+  const active = (state.tab !== "upcoming" ? 1 : 0) + (state.status ? 1 : 0);
+  $("#filterBadge").hidden = !active; $("#filterBadge").textContent = active;
+  state.page = 1; selected.clear();
+  loadTable();
+});
+
+/* --- Меню строки: просмотр, изменение статуса, отмена --- */
+bindMenu($("#rowMenu"), null);
+let menuFor = null, menuBtn = null;
+rows.addEventListener("click", (e) => {
+  const b = e.target.closest(".dots");
+  if (!b) return;
+  if (menuBtn === b && !$("#rowMenu").hidden) return closeRowMenu();
+  menuFor = byId[b.closest("tr").dataset.id];
+  closeMenus(); menuBtn = b;
+  b.setAttribute("aria-expanded", "true");
+  const m = $("#rowMenu"), r = b.getBoundingClientRect();
+  m.hidden = false;
+  $('[data-act="cancel"]', m).disabled = !SG.NEXT[menuFor.status].includes("cancelled");
+  m.style.left = Math.max(8, r.right - m.offsetWidth) + "px";
+  m.style.top = (r.bottom + m.offsetHeight + 8 > innerHeight ? r.top - m.offsetHeight - 4 : r.bottom + 4) + "px";
+  m.querySelector("button").focus();
+});
+function closeRowMenu() { $("#rowMenu").hidden = true; menuBtn?.setAttribute("aria-expanded", "false"); menuBtn?.focus(); }
+document.addEventListener("click", (e) => { if (!e.target.closest(".dots") && !e.target.closest("#rowMenu")) menuBtn?.setAttribute("aria-expanded", "false"); });
+addEventListener("scroll", () => { $("#rowMenu").hidden = true; menuBtn?.setAttribute("aria-expanded", "false"); }, true);
+
+$("#rowMenu").addEventListener("click", async (e) => {
+  const act = e.target.closest("[data-act]")?.dataset.act;
+  if (!act || !menuFor) return;
+  const a = menuFor;
+  $("#rowMenu").hidden = true; menuBtn?.setAttribute("aria-expanded", "false");
+  if (act === "view") return viewDialog(a);
+  if (act === "edit") {
+    return SG.openStatusDialog({
+      appt: a, endpoint: (id) => `/api/staff/appointments/${id}`, payEndpoint: (id) => `/api/staff/appointments/${id}/pay`,
+      onChanged: refresh, on401: toLogin,
+    });
+  }
+  if (act === "cancel" && confirm(`Отменить запись ${orderNo(a.id)} (${a.clientName})?`)) {
+    try { await SG.api(`/api/staff/appointments/${a.id}`, { method: "PATCH", body: { status: "cancelled" }, on401: toLogin }); toast("Запись отменена"); refresh(); }
+    catch (err) { toast(err.message); }
+  }
+});
+
+/** Карточка записи только для чтения. */
+function viewDialog(a) {
+  const dlg = document.createElement("dialog");
+  const line = (k, v) => `<div style="display:flex;justify-content:space-between;gap:16px;padding:9px 0;border-top:1px solid var(--row-line)"><span class="hint" style="padding-top:2px">${k}</span><span style="text-align:right">${v}</span></div>`;
+  dlg.innerHTML = `<h2>${orderNo(a.id)} ${statusChip(a.status)}</h2>
+    ${line("Зуб", a.toothName ? toothLabel(a) : "не указан")}
+    ${line("Пациент", `${esc(a.clientName)}<br><a href="tel:${esc(a.clientPhone)}" style="color:var(--muted)">${esc(a.clientPhone)}</a>`)}
+    ${line("Услуги", esc(a.services))}
+    ${line("Врач", esc(a.masterName))}
+    ${line("Начало", fmtWhen(a.startsAt))}
+    ${line("Окончание", fmtWhen(a.endsAt))}
+    <div id="ord"></div>
+    <div class="actions"><button class="btn ghost" data-close>Закрыть</button></div>`;
+  document.body.append(dlg);
+  dlg.addEventListener("close", () => { dlg.remove(); refresh(); });
+  dlg.addEventListener("click", (e) => { if (e.target === dlg || e.target.closest("[data-close]")) dlg.close(); });
+  dlg.showModal();
+  orderBlock(dlg.querySelector("#ord"), a);
+}
+
+/**
+ * Карта приёма внутри карточки записи: жалобы и осмотр врача, материалы (пломбы, анестезия, коронки), итог.
+ * Пока запись не закрыта (оплачена, отменена, неявка), всё можно править.
+ */
+async function orderBlock(box, a) {
+  const editable = ["booked", "confirmed", "arrived", "in_progress", "ready"].includes(a.status);
+  const base = `/api/staff/appointments/${a.id}`;
+  const row = (k, v) => `<div style="display:flex;justify-content:space-between;gap:16px;padding:6px 0;font-size:13px"><span class="hint">${k}</span><span>${v}</span></div>`;
+  const draw = (o) => {
+    box.innerHTML = `
+      <div style="border-top:1px solid var(--row-line);padding-top:12px;margin-top:4px">
+        <p class="hint caps" style="margin-bottom:8px">Жалобы и осмотр</p>
+        ${editable ? `<textarea class="input" id="ex-notes" rows="3" maxlength="2000" aria-label="Жалобы и осмотр" placeholder="Жалобы, осмотр, назначения, рекомендации" style="font-size:13px;padding:8px 10px;resize:vertical">${esc(o.examNotes)}</textarea>
+          <button class="btn ghost" id="ex-save" style="margin-top:8px;padding:7px 12px;font-size:12px">Сохранить осмотр</button>`
+        : `<p style="font-size:13px">${o.examNotes ? esc(o.examNotes) : "—"}</p>`}
+        <p class="hint caps" style="margin:14px 0 4px">Материалы</p>
+        ${o.materials.length ? o.materials.map((p) => `<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 0;border-top:1px solid var(--row-line);font-size:13px">
+            <span>${esc(p.name)} <span class="hint">× ${p.qty}</span></span>
+            <span>${money(p.qty * p.priceTenge)}${editable ? ` <button class="btn ghost" data-del="${p.id}" aria-label="Удалить ${esc(p.name)}" style="padding:2px 8px;font-size:12px">×</button>` : ""}</span></div>`).join("") : `<p class="hint" style="padding:6px 0">Не добавлены</p>`}
+        ${editable ? `<form id="mat-form" style="display:grid;grid-template-columns:1fr 54px 96px auto;gap:6px;margin-top:8px">
+            <input class="input" name="name" placeholder="Пломба, анестезия…" aria-label="Название материала" required minlength="2" maxlength="80" style="font-size:13px;padding:8px 10px">
+            <input class="input" name="qty" type="number" min="1" max="1000" value="1" aria-label="Количество" style="font-size:13px;padding:8px 6px">
+            <input class="input" name="price" type="number" min="0" placeholder="Цена, ₸" aria-label="Цена за единицу" required style="font-size:13px;padding:8px 10px">
+            <button class="btn" style="padding:7px 12px;font-size:12px">Добавить</button></form>` : ""}
+        <div style="border-top:1px solid var(--row-line);margin-top:10px;padding-top:6px">
+          ${row("Услуги", money(o.servicesTenge))}${row("Материалы", money(o.materialsTenge))}
+          <div style="display:flex;justify-content:space-between;padding:6px 0;font-size:15px;font-weight:600"><span>Итого</span><span>${money(o.totalTenge)}</span></div>
+        </div>
+      </div>`;
+  };
+  const save = async (method, url, body) => {
+    try { const o = await SG.api(url, { method, body, on401: toLogin }); draw(o); a.priceTenge = o.totalTenge; return o; }
+    catch (err) { toast(err.message); }
+  };
+  try { draw(await get(`${base}/order`)); } catch (err) { box.innerHTML = `<p class="hint">${esc(err.message)}</p>`; return; }
+  box.addEventListener("click", async (e) => {
+    const del = e.target.closest("[data-del]");
+    if (del) return void save("DELETE", `${base}/materials/${del.dataset.del}`);
+    if (e.target.closest("#ex-save") && await save("PUT", `${base}/exam`, { notes: $("#ex-notes", box).value })) toast("Осмотр сохранён");
+  });
+  box.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const f = e.target;
+    if (await save("POST", `${base}/materials`, { name: f.name.value, qty: Number(f.qty.value), priceTenge: Number(f.price.value) })) toast("Материал добавлен");
+  });
+}
+
+/* ==========================================================================
+   Экспорт в CSV: выбранные строки или вся текущая выборка
+   ========================================================================== */
+$("#exportBtn").addEventListener("click", async () => {
+  try {
+    let items;
+    if (selected.size) items = [...selected].map((id) => byId[id]);
+    else {
+      items = [];
+      for (let page = 1; page <= 50; page++) {            // по 100 записей, не больше 5000
+        const r = await get("/api/staff/appointments?" + queryString(page, 100));
+        items.push(...r.items);
+        if (items.length >= r.total) break;
+      }
+    }
+    if (!items.length) return toast("Нечего экспортировать");
+    const cell = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+    const head = ["Приём №", "Зуб", "Диагноз", "Статус", "Услуги", "Начало", "Окончание", "Пациент", "Телефон", "Врач", "Сумма, ₸"];
+    const lines = items.map((a) => [orderNo(a.id), a.toothName, a.toothDiagnosis, SG.statusLabel(a.status), a.services, fmtWhen(a.startsAt), fmtWhen(a.endsAt), a.clientName, a.clientPhone, a.masterName, a.priceTenge].map(cell).join(";"));
+    // BOM и «;» — чтобы русский Excel открыл файл сразу с правильной кодировкой и колонками
+    const blob = new Blob(["﻿" + [head.map(cell).join(";"), ...lines].join("\r\n")], { type: "text/csv;charset=utf-8" });
+    const a = Object.assign(document.createElement("a"), { href: URL.createObjectURL(blob), download: `zapisi-${SG.today()}.csv` });
+    document.body.append(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    toast(`Экспортировано записей: ${items.length}`);
+  } catch (err) { toast(err.message); }
+});
+
+$("#newAppt").addEventListener("click", () =>
+  SG.openBookingDialog({ onCreated: refresh, on401: toLogin }).catch((e) => toast(e.message)));
+
+function refresh() {
+  loadStats().catch(() => {});
+  if (!$("#page-dashboard").classList.contains("hidden")) loadTable().catch((e) => toast(e.message));
+}
+
+/* ==========================================================================
+   Верхняя панель: уведомления, онлайн-запись, профиль
+   ========================================================================== */
+$("#bellBtn").addEventListener("click", async () => {
+  try {
+    const r = await get("/api/staff/appointments?" + new URLSearchParams({ tab: "upcoming", status: "booked", pageSize: 1 }));
+    toast(r.total ? `Ждут подтверждения: ${r.total}` : "Новых уведомлений нет");
+  } catch (err) { toast(err.message); }
+});
+$("#pubBtn").addEventListener("click", () => window.Me?.salonSlug ? window.open(`/b/${window.Me.salonSlug}`, "_blank", "noopener") : toast("Подождите, профиль загружается"));
+const meMenu = bindMenu($("#meMenu"), $("#meBtn"));
+$("#meBtn").addEventListener("click", () => ($("#meMenu").hidden ? meMenu.open() : meMenu.close()));
+$("#meLogout").addEventListener("click", logout);
+
+/* ==========================================================================
+   Разделы: «Записи» остаются на странице, остальные рисует pages.js
+   ========================================================================== */
+function goDashboard() { setActive($('.nav-item[data-page="dashboard"]')); showPage("dashboard"); }
+function showPage(name) {
+  closeMenus();
+  const dash = name === "dashboard";
+  $("#page-dashboard").classList.toggle("hidden", !dash);
+  $("#page-other").classList.toggle("hidden", dash);
+  if (dash) { loadStats().catch(() => {}); loadTable().catch((e) => toast(e.message)); return; }
+  const render = window.Pages?.[name];
+  if (render) render($("#page-other"), { toLogin });
+  else toast("Раздел в разработке");
+}
+
+get("/api/auth/me").then((m) => {
+  $("#meName").textContent = m.name;
+  $("#meRole").textContent = m.role === "owner" ? "Владелец СТО" : "Администратор";
+  $("#meAvatar").textContent = initials(m.name);
+  window.Me = m; // роль и ссылка на онлайн-запись нужны разделам
+});
+
+/* ==========================================================================
+   Старт
+   ========================================================================== */
+document.fonts.ready.then(moveHighlight);
+moveHighlight();
+loadStats().catch(() => toast("Не удалось загрузить сводку"));
+loadTable().catch(() => toast("Не удалось загрузить записи"));
+window.addEventListener("load", () => showPage("overview")); // pages.js подключается в конце страницы
+</script>
+</body>
+</html>

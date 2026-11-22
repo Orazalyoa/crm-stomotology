@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Моё расписание — Sergek Dent</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/ui.css">
+<style>
+  /* Страница врача — телефон прежде всего: крупные зоны нажатия, одна колонка. */
+  body { padding-bottom: env(safe-area-inset-bottom); }
+  .wrap { max-width: 640px; margin: 0 auto; padding: 16px; }
+  header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; }
+  .who { display: flex; align-items: center; gap: 10px; }
+  .who .avatar { width: 40px; height: 40px; }
+  .who b { display: block; font-weight: 500; }
+  .nav { display: grid; grid-template-columns: 48px 1fr 48px; gap: 8px; align-items: center; margin-bottom: 14px; }
+  .nav button.arrow { height: 48px; border-radius: var(--r-ctl); background: var(--card); border: 1px solid var(--line); display: grid; place-items: center; }
+  .nav .day { text-align: center; font-weight: 600; }
+  .nav .day small { display: block; font-weight: 400; color: var(--muted); font-size: 11px; }
+  .summary { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 14px; }
+  .summary .card { padding: 14px; }
+  .summary b { display: block; font-size: 24px; font-weight: 600; }
+  .item { display: grid; grid-template-columns: 58px 1fr; gap: 12px; margin-bottom: 10px; }
+  .time { font-weight: 600; padding-top: 14px; text-align: right; }
+  .time small { display: block; color: var(--muted); font-weight: 400; font-size: 11px; }
+  .item .card { padding: 14px; }
+  .row { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+  .client { font-weight: 500; }
+  .tooth-line { margin-top: 2px; font-size: 13px; }
+  .services { color: var(--muted); font-size: 13px; margin: 2px 0 10px; }
+  .tools { display: flex; gap: 8px; flex-wrap: wrap; }
+  .tools a, .tools button { padding: 10px 14px; border-radius: var(--r-ctl); background: #fff; border: 1px solid var(--field-line); font-size: 13px; text-decoration: none; color: inherit; min-height: 44px; display: inline-flex; align-items: center; }
+  .tools .go { background: var(--accent); color: #fff; }
+  @keyframes rise { from { opacity: 0; transform: translateY(10px); } }
+  .item { animation: rise .4s var(--ease) backwards; animation-delay: calc(var(--i, 0) * 50ms); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="who"><div class="avatar" id="avatar"></div><div><b id="name">…</b><span class="hint" data-i18n="Врач">Врач</span></div></div>
+    <div style="display:flex;gap:8px;align-items:center"><span id="lang"></span><button class="btn ghost" id="logout" data-i18n="Выйти">Выйти</button></div>
+  </header>
+
+  <div class="nav">
+    <button class="arrow" id="prev" data-i18n-label="Предыдущий день" aria-label="Предыдущий день"><svg class="ic" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg></button>
+    <button class="day" id="day"></button>
+    <button class="arrow" id="next" data-i18n-label="Следующий день" aria-label="Следующий день"><svg class="ic" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></button>
+  </div>
+
+  <section class="summary" aria-label="Итоги дня">
+    <div class="card"><span class="hint" data-i18n="Записей">Записей</span><b id="count">0</b></div>
+    <div class="card"><span class="hint" data-i18n="Ожидаемый доход">Ожидаемый доход</span><b id="sum">0 ₸</b></div>
+  </section>
+
+  <section id="list" aria-live="polite"></section>
+</div>
+
+<script src="/assets/common.js"></script>
+<script src="/assets/i18n.js"></script>
+<script>
+  const { $, esc, api, toast, fmtTime, statusChip, money, t } = SG;
+  SG.langSwitcher($("#lang"));
+  const toLogin = () => location.replace("/login");
+  let date = SG.today();
+
+  /** Кнопки по стадии: пациент пришёл → начать приём → завершить. Оплата и отмена — только в кассе. */
+  const steps = (status) => ({
+    booked: [["arrived", "Пациент пришёл", true], ["no_show", "Не пришёл"]],
+    confirmed: [["arrived", "Пациент пришёл", true], ["no_show", "Не пришёл"]],
+    arrived: [["in_progress", "Начать приём", true], ["no_show", "Не пришёл"]],
+    in_progress: [["ready", "Завершить приём", true]],
+  }[status] ?? []);
+
+  async function load() {
+    const label = SG.dayLabel(date);
+    $("#day").innerHTML = `${esc(label[0].toUpperCase() + label.slice(1))}<small>${date === SG.today() ? t("Сегодня") : t("Нажмите, чтобы вернуться на сегодня")}</small>`;
+    const { items } = await api(`/api/master/appointments?date=${date}`, { on401: toLogin });
+    const active = items.filter((a) => !["cancelled", "no_show"].includes(a.status));
+    $("#count").textContent = active.length;
+    $("#sum").textContent = money(active.reduce((s, a) => s + a.priceTenge, 0));
+    $("#list").innerHTML = items.length ? items.map((a, i) => {
+      return `<article class="item" style="--i:${i}">
+        <div class="time">${fmtTime(a.startsAt)}<small>${fmtTime(a.endsAt)}</small></div>
+        <div class="card">
+          <div class="row"><span class="client">${esc(a.clientName)}</span>${statusChip(a.status)}</div>
+          ${a.toothName ? `<div class="tooth-line">${esc(a.toothName)} <span class="dx">${esc(a.toothDiagnosis)}</span></div>` : ""}
+          <div class="services">${esc(a.services)} · ${money(a.priceTenge)}</div>
+          <div class="tools">
+            <a href="tel:${esc(a.clientPhone)}">${t("Позвонить")}</a>
+            ${["arrived", "in_progress", "ready"].includes(a.status) ? `<button data-intake="${a.id}" data-notes="${esc(a.examNotes ?? "")}">${t("Осмотр")}</button>` : ""}
+            ${steps(a.status).map(([s, label, primary]) => `<button ${primary ? 'class="go"' : ""} data-id="${a.id}" data-s="${s}">${t(label)}</button>`).join("")}
+          </div>
+        </div></article>`;
+    }).join("") : `<p class="empty">${t("На этот день записей нет")}</p>`;
+  }
+
+  /** Жалобы и осмотр врача. */
+  function intakeDialog(btn) {
+    const dlg = document.createElement("dialog");
+    dlg.innerHTML = `<h2>${t("Жалобы и осмотр")}</h2>
+      <div class="field"><label for="in-notes">${t("Осмотр")}</label><textarea id="in-notes" rows="4" maxlength="2000" placeholder="${t("Жалобы, осмотр, назначения")}" style="width:100%;font-size:16px;padding:11px 13px;border:1px solid var(--field-line);border-radius:var(--r-ctl)">${esc(btn.dataset.notes)}</textarea></div>
+      <p class="error" id="in-err" role="alert"></p>
+      <div class="actions"><button class="btn ghost" data-close>${t("Закрыть")}</button><button class="btn" id="in-save">${t("Сохранить")}</button></div>`;
+    document.body.append(dlg);
+    dlg.addEventListener("close", () => dlg.remove());
+    dlg.addEventListener("click", async (e) => {
+      if (e.target === dlg || e.target.closest("[data-close]")) return dlg.close();
+      if (!e.target.closest("#in-save")) return;
+      try {
+        await api(`/api/staff/appointments/${btn.dataset.intake}/exam`, { method: "PUT", body: { notes: $("#in-notes").value }, on401: toLogin });
+        dlg.close(); toast(t("Сохранено")); load();
+      } catch (ex) { $("#in-err").textContent = ex.message; }
+    });
+    dlg.showModal();
+  }
+
+  $("#list").addEventListener("click", async (e) => {
+    const ib = e.target.closest("[data-intake]");
+    if (ib) return intakeDialog(ib);
+    const b = e.target.closest("[data-s]");
+    if (!b) return;
+    b.disabled = true;
+    try { await api(`/api/master/appointments/${b.dataset.id}`, { method: "PATCH", body: { status: b.dataset.s }, on401: toLogin }); toast(t("Сохранено")); load(); }
+    catch (ex) { toast(ex.message); b.disabled = false; }
+  });
+  $("#prev").onclick = () => { date = SG.addDays(date, -1); load(); };
+  $("#next").onclick = () => { date = SG.addDays(date, 1); load(); };
+  $("#day").onclick = () => { date = SG.today(); load(); };
+  $("#logout").onclick = async () => { await api("/api/auth/logout", { method: "POST" }); toLogin(); };
+
+  api("/api/master/me", { on401: toLogin }).then((m) => { $("#name").textContent = m.name; $("#avatar").textContent = SG.initials(m.name); });
+  load().catch((e) => toast(e.message));
+  setInterval(() => load().catch(() => {}), 60_000); // свежие записи без перезагрузки
+</script>
+</body>
+</html>
