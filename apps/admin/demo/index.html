@@ -1,152 +1,30 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ru">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex">
-  <title>Sergek Dent — демо</title>
+  <title>Sergek Dent — демонстрация</title>
   <style>
-    :root {
-      color-scheme: light;
-      font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      color: #172033;
-      background: #f7f8fb;
-      font-synthesis: none;
-      text-rendering: optimizeLegibility;
-      --muted: #788196;
-      --line: #e8ebf1;
-      --blue: #5069ed;
-    }
-    * { box-sizing: border-box; }
-    body { margin: 0; min-height: 100vh; }
-    button, input, select { font: inherit; }
-    .app { min-height: 100vh; display: grid; grid-template-columns: 220px minmax(0, 1fr); }
-    aside { display: flex; flex-direction: column; background: #101116; color: #f7f7fa; padding: 18px 12px; }
-    .brand { display: flex; align-items: center; gap: 10px; padding: 0 7px 22px; font-size: 15px; font-weight: 650; }
-    .logo { display: grid; width: 27px; height: 27px; place-items: center; border-radius: 50%; background: #526aff; color: white; }
-    nav { display: grid; gap: 5px; }
-    nav button { width: 100%; padding: 10px 11px; border: 0; border-radius: 8px; background: transparent; color: #c1c3cc; text-align: left; cursor: pointer; }
-    nav button:hover, nav button.active { background: #292a31; color: white; }
-    .side-note { margin: auto 5px 0; padding: 12px; border: 1px solid #34353d; border-radius: 8px; color: #b6bac6; font-size: 12px; line-height: 1.5; }
-    main { min-width: 0; }
-    .topbar { height: 62px; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 0 26px; border-bottom: 1px solid var(--line); background: white; }
-    .topbar-title { font-size: 14px; color: #515c72; }
-    .demo-badge { padding: 6px 10px; border-radius: 20px; background: #fff3d8; color: #8a5a00; font-size: 12px; font-weight: 650; white-space: nowrap; }
-    .content { max-width: 1320px; margin: 0 auto; padding: 25px 26px 40px; }
-    .title-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 20px; }
-    h1 { margin: 0; font-size: 21px; font-weight: 650; }
-    .filters { display: flex; gap: 8px; }
-    input, select { height: 36px; border: 1px solid #dfe3eb; border-radius: 8px; background: #fff; padding: 0 11px; color: #30394c; outline: none; }
-    input { width: min(250px, 42vw); }
-    input:focus, select:focus { border-color: #8798fa; box-shadow: 0 0 0 3px #eef0ff; }
-    .notice { margin-bottom: 18px; padding: 11px 14px; border: 1px solid #dce5ff; border-radius: 9px; background: #f1f4ff; color: #465781; font-size: 13px; line-height: 1.5; }
-    .table-wrap { overflow: auto; border: 1px solid var(--line); border-radius: 10px; background: #fff; }
-    table { width: 100%; border-collapse: collapse; min-width: 720px; }
-    th { height: 42px; padding: 0 14px; border-bottom: 1px solid var(--line); color: #788196; text-align: left; font-size: 10px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; }
-    td { height: 55px; padding: 8px 14px; border-bottom: 1px solid #f0f1f5; color: #3a4355; font-size: 13px; }
-    tbody tr:last-child td { border-bottom: 0; }
-    .patient { color: #20283a; font-weight: 600; }
-    .tag { display: inline-block; padding: 4px 7px; border-radius: 12px; background: #f0f2f8; color: #58647c; font-size: 11px; }
-    .count { margin: 11px 2px; color: var(--muted); font-size: 12px; }
-    .empty { padding: 30px; color: var(--muted); text-align: center; }
-    .overview { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
-    .stat { padding: 18px; border: 1px solid var(--line); border-radius: 10px; background: #fff; }
-    .stat-label { color: var(--muted); font-size: 13px; }
-    .stat-value { margin-top: 9px; color: #1d273b; font-size: 26px; font-weight: 650; }
-    .appointments { margin-top: 18px; }
-    .appointments h2 { font-size: 16px; }
-    .appt { display: flex; justify-content: space-between; gap: 12px; padding: 13px 15px; border-bottom: 1px solid var(--line); background: #fff; font-size: 13px; }
-    .appt:first-of-type { border-radius: 9px 9px 0 0; }
-    .appt:last-child { border-bottom: 0; border-radius: 0 0 9px 9px; }
-    .appt-time { color: var(--blue); font-weight: 650; white-space: nowrap; }
-    @media (max-width: 720px) {
-      .app { grid-template-columns: 1fr; }
-      aside { padding: 10px 12px; }
-      .brand { padding: 0 4px 10px; }
-      nav { grid-template-columns: repeat(3, 1fr); }
-      nav button { padding: 9px 6px; text-align: center; font-size: 12px; }
-      .side-note { display: none; }
-      .topbar { height: 52px; padding: 0 14px; }
-      .content { padding: 20px 14px; }
-      .title-row { align-items: flex-start; flex-direction: column; }
-      .filters { width: 100%; }
-      input { flex: 1; width: 0; }
-      .overview { grid-template-columns: 1fr; gap: 9px; }
+    html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; }
+    iframe { display: block; width: 100%; height: 100%; border: 0; }
+    .demo-label {
+      position: fixed;
+      z-index: 2;
+      right: 12px;
+      bottom: 12px;
+      padding: 6px 9px;
+      border: 1px solid #e8d8a8;
+      border-radius: 7px;
+      background: #fff8e6;
+      color: #76520c;
+      font: 600 11px/1.2 Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      pointer-events: none;
     }
   </style>
 </head>
 <body>
-  <div class="app">
-    <aside>
-      <div class="brand"><span class="logo" aria-hidden="true">✦</span>Sergek Dent</div>
-      <nav aria-label="Разделы демо">
-        <button type="button" data-view="overview">Обзор</button>
-        <button type="button" data-view="appointments">Записи</button>
-        <button type="button" data-view="patients" class="active">Пациенты</button>
-      </nav>
-      <div class="side-note">Демонстрационная версия<br>Данные вымышлены и не сохраняются.</div>
-    </aside>
-    <main>
-      <header class="topbar">
-        <div class="topbar-title">Панель управления</div>
-        <span class="demo-badge">ДЕМО · ТЕСТОВЫЕ ДАННЫЕ</span>
-      </header>
-      <section class="content" id="content"></section>
-    </main>
-  </div>
-  <script>
-    const patients = [
-      { name: "Айдана Серикова", phone: "+7 700 000-00-01", teeth: "36 — кариес", tags: ["Постоянный"], visits: 4, last: "18.11.2026", segment: "visited" },
-      { name: "Данияр Толеуов", phone: "+7 700 000-00-02", teeth: "—", tags: ["Новый"], visits: 1, last: "21.11.2026", segment: "new" },
-      { name: "Алия Нурланова", phone: "+7 700 000-00-03", teeth: "11 — пломба", tags: ["Контроль"], visits: 3, last: "12.11.2026", segment: "visited" },
-      { name: "Марат Ибраев", phone: "+7 700 000-00-04", teeth: "—", tags: ["Новый"], visits: 0, last: "—", segment: "never" },
-      { name: "Жанна Абдрахманова", phone: "+7 700 000-00-05", teeth: "24 — коронка", tags: ["Постоянный", "Ортопедия"], visits: 7, last: "20.11.2026", segment: "visited" },
-      { name: "Руслан Касымов", phone: "+7 700 000-00-06", teeth: "—", tags: ["Контроль"], visits: 2, last: "04.10.2026", segment: "visited" },
-      { name: "Мадина Омарова", phone: "+7 700 000-00-07", teeth: "—", tags: ["Новый"], visits: 0, last: "—", segment: "never" },
-      { name: "Арман Садыков", phone: "+7 700 000-00-08", teeth: "46 — пломба", tags: ["Постоянный"], visits: 5, last: "15.11.2026", segment: "visited" },
-    ];
-    const appointments = [
-      { time: "09:30", patient: "Айдана Серикова", doctor: "Данияр Нурбеков", service: "Лечение кариеса", status: "Подтверждена" },
-      { time: "11:00", patient: "Алия Нурланова", doctor: "Аидос Ермеков", service: "Осмотр", status: "Записана" },
-      { time: "14:30", patient: "Жанна Абдрахманова", doctor: "Данияр Нурбеков", service: "Консультация", status: "Подтверждена" },
-    ];
-    const content = document.querySelector("#content");
-    let activeView = "patients";
-
-    function renderPatients() {
-      content.innerHTML = `<div class="title-row"><h1>Пациенты</h1><div class="filters"><input id="search" type="search" placeholder="Имя или телефон" aria-label="Поиск пациентов"><select id="segment" aria-label="Фильтр по сегменту"><option value="">Все</option><option value="visited">Были на приёме</option><option value="new">Новые</option><option value="never">Ещё не были</option></select></div></div>
-        <div class="notice">Это отдельное демо: показаны вымышленные примеры. Данные из вашей базы здесь не загружаются и изменения не сохраняются.</div>
-        <div class="table-wrap"><table><thead><tr><th>Пациент</th><th>Телефон</th><th>Зубы в карте</th><th>Теги</th><th>Визитов</th><th>Последний визит</th></tr></thead><tbody id="rows"></tbody></table></div><div class="count" id="count"></div>`;
-      const search = document.querySelector("#search");
-      const segment = document.querySelector("#segment");
-      const rows = document.querySelector("#rows");
-      const count = document.querySelector("#count");
-      function update() {
-        const q = search.value.trim().toLocaleLowerCase("ru");
-        const shown = patients.filter((p) => (!segment.value || p.segment === segment.value) && (!q || `${p.name} ${p.phone} ${p.teeth}`.toLocaleLowerCase("ru").includes(q)));
-        rows.innerHTML = shown.length ? shown.map((p) => `<tr><td class="patient">${p.name}</td><td>${p.phone}</td><td>${p.teeth}</td><td>${p.tags.map((tag) => `<span class="tag">${tag}</span>`).join(" ")}</td><td>${p.visits}</td><td>${p.last}</td></tr>`).join("") : `<tr><td class="empty" colspan="6">В демо нет совпадений</td></tr>`;
-        count.textContent = `Показано: ${shown.length} из ${patients.length}`;
-      }
-      search.addEventListener("input", update);
-      segment.addEventListener("change", update);
-      update();
-    }
-
-    function renderAppointments() {
-      content.innerHTML = `<div class="title-row"><h1>Записи на сегодня</h1></div><div class="notice">Тестовые записи для демонстрации интерфейса. Они не связаны с сервером и не сохраняются.</div>${appointments.map((a) => `<div class="appt"><span class="appt-time">${a.time}</span><span>${a.patient} · ${a.service}</span><span>${a.doctor} · ${a.status}</span></div>`).join("")}`;
-    }
-
-    function renderOverview() {
-      content.innerHTML = `<div class="title-row"><h1>Обзор клиники</h1></div><div class="notice">Демо-режим: все цифры ниже придуманы и предназначены только для просмотра.</div><div class="overview"><div class="stat"><div class="stat-label">Пациенты в демо</div><div class="stat-value">${patients.length}</div></div><div class="stat"><div class="stat-label">Записи на сегодня</div><div class="stat-value">${appointments.length}</div></div><div class="stat"><div class="stat-label">Ближайшая запись</div><div class="stat-value">${appointments[0].time}</div></div></div><div class="appointments"><h2>Ближайшие записи</h2>${appointments.map((a) => `<div class="appt"><span class="appt-time">${a.time}</span><span>${a.patient} · ${a.service}</span><span>${a.status}</span></div>`).join("")}</div>`;
-    }
-
-    const renderers = { overview: renderOverview, appointments: renderAppointments, patients: renderPatients };
-    document.querySelectorAll("[data-view]").forEach((button) => button.addEventListener("click", () => {
-      activeView = button.dataset.view;
-      document.querySelectorAll("[data-view]").forEach((item) => item.classList.toggle("active", item === button));
-      renderers[activeView]();
-    }));
-    renderers[activeView]();
-  </script>
+  <iframe src="./admin/index.html?demo=1" title="Демо-панель Sergek Dent"></iframe>
+  <div class="demo-label">ДЕМО · Вымышленные данные, без сохранения</div>
 </body>
 </html>

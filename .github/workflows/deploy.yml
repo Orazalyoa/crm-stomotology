@@ -27,12 +27,8 @@ jobs:
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
 
-      - name: Prepare site
-        run: |
-          mkdir -p _site/assets
-          cp apps/admin/index.html apps/admin/mobile.html apps/admin/pages.js _site/
-          cp apps/auth/login.html _site/login.html
-          cp apps/shared/booking-dialog.js apps/shared/common.js apps/shared/i18n.js apps/shared/ui.css _site/assets/
+      - name: Build demo site
+        run: node apps/admin/demo/build.mjs
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
