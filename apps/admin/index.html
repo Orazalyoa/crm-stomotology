@@ -55,6 +55,7 @@ button:disabled { cursor: default; }
    Топбар
    ========================================================================== */
 .topbar { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 14px 32px; border-bottom: 1px solid var(--line); }
+#mobileNavToggle { display: none; }
 .search { position: relative; display: flex; align-items: center; width: 235px; height: 36px; padding: 0 12px; gap: 8px; background: #fff; border: 1px solid var(--field-line); border-radius: var(--r-ctl); transition: border-color .25s var(--ease), box-shadow .25s var(--ease); }
 .search:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-ring); }
 .search .ic { width: 16px; height: 16px; color: var(--muted); }
@@ -185,7 +186,142 @@ tbody tr:hover .dots, .dots:focus-visible, .dots[aria-expanded="true"] { opacity
   .kpi-cell:nth-child(3) { padding-left: 0; border-left: 0; }
   .kpi-cell:nth-child(n+3) { border-top: 1px solid var(--line); }
 }
-@media (max-width: 760px) { .search { width: 100%; } .topbar { flex-wrap: wrap; } }
+@media (max-width: 760px) {
+  body { min-width: 320px; }
+  body.mobile-nav-open { overflow: hidden; }
+  .app { display: block; min-height: 100vh; }
+  .side {
+    position: fixed;
+    z-index: 41;
+    inset: 0 auto 0 0;
+    width: min(84vw, 290px);
+    height: 100vh;
+    height: 100dvh;
+    padding: 16px 12px;
+    transform: translateX(-105%);
+    transition: transform .25s var(--ease);
+    box-shadow: 12px 0 32px rgba(0,0,0,.2);
+  }
+  .app.mobile-nav-open .side { transform: translateX(0); }
+  .brand { justify-content: flex-start; padding: 2px 6px 16px; }
+  .brand span, .nav-item span { display: inline; }
+  .nav-item { justify-content: flex-start; padding: 0 10px; }
+  .nav-backdrop {
+    position: fixed;
+    z-index: 40;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(11,11,15,.42);
+  }
+  .nav-backdrop[hidden] { display: none; }
+  .topbar {
+    display: grid;
+    grid-template-columns: 38px minmax(0, 1fr);
+    grid-template-areas: "menu user" "search search";
+    gap: 8px;
+    padding: 10px 12px;
+  }
+  #mobileNavToggle {
+    grid-area: menu;
+    width: 36px;
+    height: 36px;
+    display: grid;
+    place-items: center;
+    border: 1px solid var(--field-line);
+    border-radius: var(--r-ctl);
+    background: #fff;
+  }
+  .search { grid-area: search; width: 100%; }
+  .user { grid-area: user; justify-self: end; gap: 6px; }
+  .user .me { gap: 4px; padding-right: 2px; }
+  .content { padding: 0 12px 20px; }
+  .page-head { padding: 16px 0 12px; }
+  .page-head h1 { font-size: 18px; }
+  .kpis-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .kpi-cell { padding: 10px 8px 10px 0; }
+  .kpi-cell + .kpi-cell { padding-left: 8px; }
+  .kpi-cell:nth-child(3) { padding-left: 0; }
+  .kpi-cell b { font-size: 18px; }
+  .toolbar { align-items: stretch; padding: 10px 0; }
+  .toolbar > .search { width: 100%; }
+  .tools { flex-wrap: wrap; }
+  .tbtn { padding: 0 10px; }
+  .content .ov-grid, .content .cols { grid-template-columns: minmax(0, 1fr) !important; }
+  .content .ov-card { padding: 13px; }
+  .content .ov-chart svg { height: 180px; }
+  .content .ov-donut { gap: 12px; }
+  .content .ov-donut svg { width: 112px; height: 112px; }
+  .content .hbar {
+    grid-template-columns: minmax(68px, .75fr) minmax(28px, 1fr) minmax(62px, .7fr);
+    gap: 6px;
+    font-size: 11px;
+  }
+  .content .hbar span:last-child { white-space: normal; overflow-wrap: anywhere; }
+  .content .bars { height: 120px; }
+  .content .cal-grid { min-width: 600px; }
+  #page-other .panel { min-width: 0; }
+  #page-other .ph { align-items: stretch; flex-direction: column; }
+  #page-other .ph .row-tools { width: 100%; }
+  #page-other .ph .row-tools .in-sm { width: auto !important; min-width: 0; flex: 1 1 125px; }
+  #cl-q, #cl-seg { width: auto !important; min-width: 0; flex: 1 1 125px; }
+  #page-other .field-row { grid-template-columns: minmax(0, 1fr); gap: 0; }
+  #page-other .panel .cols { grid-template-columns: minmax(0, 1fr) !important; }
+  #page-other .table-wrap { max-width: 100%; }
+  #appointmentsWrap { overflow: visible; border-top: 0; }
+  .mobile-cards {
+    display: block;
+    min-width: 0;
+  }
+  .mobile-cards thead { display: none; }
+  .mobile-cards tbody { display: grid; gap: 9px; }
+  .mobile-cards tbody tr:not(.empty-row):not(.total-row) {
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    overflow: hidden;
+    border: 1px solid var(--line);
+    border-radius: var(--r-card);
+    background: #fff;
+    box-shadow: var(--shadow);
+  }
+  .mobile-cards tbody td {
+    display: block;
+    min-width: 0;
+    height: auto;
+    min-height: 0;
+    padding: 9px 10px;
+    border: 0;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    background: transparent;
+  }
+  .mobile-cards tbody td[data-label]::before {
+    display: block;
+    margin-bottom: 3px;
+    color: var(--muted);
+    font-size: 9px;
+    line-height: 1.3;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    content: attr(data-label);
+  }
+  #appointmentsTable tbody td.c-cb { display: none; }
+  #appointmentsTable tbody td:nth-child(2), #appointmentsTable tbody td:nth-child(3) { grid-row: 1; }
+  #appointmentsTable tbody td:nth-child(4), #appointmentsTable tbody td:nth-child(5), #appointmentsTable tbody td:nth-child(6) { grid-column: 1 / -1; }
+  #appointmentsTable tbody td:nth-child(6) { font-weight: 600; }
+  #appointmentsTable tbody td:nth-child(10) { position: absolute; top: 4px; right: 4px; padding: 0; }
+  #appointmentsTable tbody td:nth-child(10)::before { display: none; }
+  #clientsTable tbody td:first-child, #clientsTable tbody td:nth-child(4) { grid-column: 1 / -1; }
+  #clientsTable tbody td:first-child { border-bottom: 1px solid var(--row-line); }
+  #page-other .table-wrap { overflow: visible; }
+  .mobile-cards tbody tr.empty-row, .mobile-cards tbody tr.total-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .mobile-cards tbody tr.empty-row td, .mobile-cards tbody tr.total-row td { grid-column: 1 / -1; }
+  .mobile-cards tbody tr.empty-row td::before, .mobile-cards tbody tr.total-row td::before { display: none; }
+  #servicesTable input.in-sm { width: 100% !important; min-width: 0; }
+  #servicesTable td:last-child { display: flex; gap: 6px; }
+  #payrollTable tbody tr.total-row td:first-child { font-weight: 600; }
+}
 
 /* ==========================================================================
    prefers-reduced-motion: отключаем все анимации
@@ -255,6 +391,9 @@ tbody tr:hover .dots, .dots:focus-visible, .dots[aria-expanded="true"] { opacity
   <div class="main">
 
     <header class="topbar">
+      <button type="button" id="mobileNavToggle" aria-label="Открыть меню" aria-expanded="false">
+        <svg class="ic" aria-hidden="true" viewBox="0 0 24 24"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/></svg>
+      </button>
       <label class="search">
         <svg class="ic" aria-hidden="true"><use href="#i-search"/></svg><span class="sep" aria-hidden="true"></span>
         <span class="sr-only">Поиск</span>
@@ -317,8 +456,8 @@ tbody tr:hover .dots, .dots:focus-visible, .dots[aria-expanded="true"] { opacity
           </div>
         </div>
 
-        <div class="table-wrap" tabindex="0" aria-label="Таблица записей">
-          <table>
+        <div class="table-wrap" id="appointmentsWrap" tabindex="0" aria-label="Таблица записей">
+          <table id="appointmentsTable" class="mobile-cards">
             <thead>
               <tr>
                 <th class="c-cb"><label class="cb"><input type="checkbox" id="selAll" aria-label="Выбрать все записи"><span class="box"><svg viewBox="0 0 14 14"><path d="M3 7.5l2.6 2.6L11 4.5"/></svg></span></label></th>
@@ -345,6 +484,8 @@ tbody tr:hover .dots, .dots:focus-visible, .dots[aria-expanded="true"] { opacity
   </div>
 </div>
 
+<button type="button" class="nav-backdrop" id="mobileNavBackdrop" aria-label="Закрыть меню" hidden></button>
+
 <!-- Меню действий строки: просмотр, изменение статуса, отмена -->
 <div class="menu fixed-menu" id="rowMenu" role="menu" aria-label="Действия с записью" hidden>
   <button role="menuitem" data-act="view"><svg class="ic"><use href="#i-eye"/></svg>Просмотр</button>
@@ -363,11 +504,29 @@ tbody tr:hover .dots, .dots:focus-visible, .dots[aria-expanded="true"] { opacity
    ========================================================================== */
 const { $, $$, esc, initials, money, statusChip, toothLabel } = SG;
 const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
-// Узкий экран получает отдельную мобильную версию.
-if (matchMedia("(max-width: 760px)").matches && !location.search.includes("desktop")) location.replace("./mobile.html");
 const toLogin = () => location.replace("./login.html");
 const get = (url) => SG.api(url, { on401: toLogin });
 const toast = SG.toast;
+const appShell = $(".app");
+const mobileNavToggle = $("#mobileNavToggle");
+const mobileNavBackdrop = $("#mobileNavBackdrop");
+function closeMobileNav() {
+  appShell.classList.remove("mobile-nav-open");
+  document.body.classList.remove("mobile-nav-open");
+  mobileNavToggle.setAttribute("aria-expanded", "false");
+  mobileNavBackdrop.hidden = true;
+}
+mobileNavToggle.addEventListener("click", () => {
+  const open = !appShell.classList.contains("mobile-nav-open");
+  appShell.classList.toggle("mobile-nav-open", open);
+  document.body.classList.toggle("mobile-nav-open", open);
+  mobileNavToggle.setAttribute("aria-expanded", String(open));
+  mobileNavBackdrop.hidden = !open;
+});
+mobileNavBackdrop.addEventListener("click", closeMobileNav);
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") closeMobileNav();
+});
 
 /** «4 ноя 2026, 11:00» в часовом поясе СТО. */
 function fmtWhen(iso) {
@@ -398,6 +557,7 @@ function setActive(btn) {
 $$(".nav-item").forEach((btn) => btn.addEventListener("click", () => {
   if (btn.dataset.page === "logout") return logout();
   setActive(btn);
+  closeMobileNav();
   showPage(btn.dataset.page);
 }));
 addEventListener("resize", moveHighlight);
@@ -425,14 +585,14 @@ const CHECK = `<svg viewBox="0 0 14 14"><path d="M3 7.5l2.6 2.6L11 4.5"/></svg>`
 function rowHtml(a, i) {
   return `<tr data-id="${esc(a.id)}" class="${selected.has(a.id) ? "sel" : ""}" style="--i:${i}">
     <td class="c-cb"><label class="cb"><input type="checkbox" data-sel ${selected.has(a.id) ? "checked" : ""} aria-label="Выбрать запись: ${esc(a.clientName)}"><span class="box">${CHECK}</span></label></td>
-    <td>${a.toothName ? `<span class="veh">${esc(a.toothName)}</span><span class="dx">${esc(a.toothDiagnosis)}</span>` : `<span class="dim">Без привязки к зубу</span>`}</td>
-    <td>${statusChip(a.status)}</td>
-    <td><span class="cell-trunc" title="${esc(a.services)}">${esc(a.services)}</span></td>
-    <td>${fmtWhen(a.startsAt)}</td>
-    <td>${esc(a.clientName)}</td>
-    <td>${esc(a.masterName)}</td>
-    <td>${money(a.priceTenge)}</td>
-    <td>${orderNo(a.id)}</td>
+    <td data-label="Зуб">${a.toothName ? `<span class="veh">${esc(a.toothName)}</span><span class="dx">${esc(a.toothDiagnosis)}</span>` : `<span class="dim">Без привязки к зубу</span>`}</td>
+    <td data-label="Статус">${statusChip(a.status)}</td>
+    <td data-label="Услуги"><span class="cell-trunc" title="${esc(a.services)}">${esc(a.services)}</span></td>
+    <td data-label="Время">${fmtWhen(a.startsAt)}</td>
+    <td data-label="Пациент">${esc(a.clientName)}</td>
+    <td data-label="Врач">${esc(a.masterName)}</td>
+    <td data-label="Сумма">${money(a.priceTenge)}</td>
+    <td data-label="Приём №">${orderNo(a.id)}</td>
     <td class="c-act"><button class="dots" aria-label="Действия с записью: ${esc(a.clientName)}" aria-haspopup="true" aria-expanded="false"><svg class="ic"><use href="#i-dots"/></svg></button></td>
   </tr>`;
 }

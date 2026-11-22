@@ -133,13 +133,13 @@
       const list = await get("/api/staff/services/all");
       root.innerHTML = panel("Услуги", "",
         `<div class="row-tools" style="margin-bottom:14px"><input class="in-sm" id="s-name" placeholder="Название услуги" aria-label="Название услуги"><input class="in-sm" id="s-min" type="number" min="5" step="5" placeholder="Минут" aria-label="Минут" style="width:100px"><input class="in-sm" id="s-price" type="number" min="0" step="500" placeholder="Цена, ₸" aria-label="Цена, ₸" style="width:120px"><button class="btn-sm" id="s-add">Добавить</button></div>
-        <div class="table-wrap"><table class="t"><thead><tr><th>Название</th><th>Минут</th><th>Цена, ₸</th><th>Показывать в записи</th><th></th></tr></thead><tbody>
+        <div class="table-wrap"><table class="t mobile-cards" id="servicesTable"><thead><tr><th>Название</th><th>Минут</th><th>Цена, ₸</th><th>Показывать в записи</th><th></th></tr></thead><tbody>
         ${list.map((s) => `<tr data-id="${s.id}" style="${s.active ? "" : "opacity:.5"}">
-          <td><input class="in-sm" data-f="name" value="${esc(s.name)}" aria-label="Название"></td>
-          <td><input class="in-sm" data-f="durationMin" type="number" value="${s.durationMin}" aria-label="Минут" style="width:90px"></td>
-          <td><input class="in-sm" data-f="priceTenge" type="number" value="${s.priceTenge}" aria-label="Цена" style="width:110px"></td>
-          <td><button class="btn-sm ${s.active ? "" : "ghost"}" data-toggle>${s.active ? "Да" : "Нет"}</button></td>
-          <td><button class="btn-sm ghost" data-save>Сохранить</button></td></tr>`).join("")}
+          <td data-label="Услуга"><input class="in-sm" data-f="name" value="${esc(s.name)}" aria-label="Название"></td>
+          <td data-label="Минуты"><input class="in-sm" data-f="durationMin" type="number" value="${s.durationMin}" aria-label="Минут" style="width:90px"></td>
+          <td data-label="Цена, ₸"><input class="in-sm" data-f="priceTenge" type="number" value="${s.priceTenge}" aria-label="Цена" style="width:110px"></td>
+          <td data-label="В записи"><button class="btn-sm ${s.active ? "" : "ghost"}" data-toggle>${s.active ? "Да" : "Нет"}</button></td>
+          <td data-label="Действие"><button class="btn-sm ghost" data-save>Сохранить</button></td></tr>`).join("")}
         </tbody></table></div>`);
       $("#s-add").onclick = async () => {
         try { await send("POST", "/api/staff/services", { name: $("#s-name").value, durationMin: Number($("#s-min").value), priceTenge: Number($("#s-price").value) }); toast("Услуга добавлена"); draw(); } catch (e) { fail(e); }
@@ -162,13 +162,13 @@
   Pages.clients = async (root) => {
     root.innerHTML = panel("Пациенты",
       `<input class="in-sm" id="cl-q" placeholder="Имя, телефон или зуб" aria-label="Поиск пациентов" style="width:230px"><select class="in-sm" id="cl-seg" aria-label="Сегмент"><option value="">Все</option><option value="lapsed60">Не были 6 месяцев (пора на профосмотр)</option><option value="new">Новые (30 дней)</option><option value="never">Ещё не приходили</option></select>`,
-      `<div class="table-wrap"><table class="t"><thead><tr><th>Пациент</th><th>Телефон</th><th>Зубы в карте</th><th>Теги</th><th>Визитов</th><th>Последний визит</th></tr></thead><tbody id="cl-rows"></tbody></table></div>`);
+      `<div class="table-wrap"><table class="t mobile-cards" id="clientsTable"><thead><tr><th>Пациент</th><th>Телефон</th><th>Зубы в карте</th><th>Теги</th><th>Визитов</th><th>Последний визит</th></tr></thead><tbody id="cl-rows"></tbody></table></div>`);
     let timer;
     async function load() {
       const qs = new URLSearchParams({ q: $("#cl-q").value.trim(), segment: $("#cl-seg").value });
       const list = await get(`/api/staff/clients?${qs}`);
-      $("#cl-rows").innerHTML = list.length ? list.map((c) => `<tr class="click" data-id="${c.id}"><td><b>${esc(c.fullName)}</b></td><td>${esc(c.phone)}</td><td>${esc(c.teeth || "—")}</td>
-        <td><div class="tagbox">${c.tags.map((t) => `<span class="tag">${esc(t)}</span>`).join("")}</div></td><td>${c.visits}</td><td>${c.lastVisit ? fmtDateTime(c.lastVisit).slice(0, 10) : "—"}</td></tr>`).join("") : `<tr><td colspan="6" class="empty">Никого не найдено</td></tr>`;
+      $("#cl-rows").innerHTML = list.length ? list.map((c) => `<tr class="click" data-id="${c.id}"><td data-label="Пациент"><b>${esc(c.fullName)}</b></td><td data-label="Телефон">${esc(c.phone)}</td><td data-label="Зубы в карте">${esc(c.teeth || "—")}</td>
+        <td data-label="Теги"><div class="tagbox">${c.tags.map((t) => `<span class="tag">${esc(t)}</span>`).join("")}</div></td><td data-label="Визитов">${c.visits}</td><td data-label="Последний визит">${c.lastVisit ? fmtDateTime(c.lastVisit).slice(0, 10) : "—"}</td></tr>`).join("") : `<tr class="empty-row"><td colspan="6" class="empty">Никого не найдено</td></tr>`;
     }
     $("#cl-q").oninput = () => { clearTimeout(timer); timer = setTimeout(() => load().catch(fail), 250); };
     $("#cl-seg").onchange = () => load().catch(fail);
@@ -361,11 +361,11 @@
       const [cash, payroll] = await Promise.all([get(`/api/staff/cash?${qs}`), isOwner() ? get(`/api/staff/payroll?${qs}`) : null]);
       root.innerHTML = panel("Касса", periodTools(from, to),
         `<div class="kpis"><div class="kpi"><span>Поступления</span><b>${money(cash.total)}</b></div>${cash.byMethod.map((m) => `<div class="kpi"><span>${esc(METHOD[m.method] ?? m.method)}</span><b>${money(m.amount)}</b></div>`).join("")}</div>
-        <div class="table-wrap"><table class="t"><thead><tr><th>Время</th><th>Клиент</th><th>Услуги</th><th>Способ</th><th>Сумма</th></tr></thead><tbody>
-        ${cash.payments.map((p) => `<tr><td>${fmtDateTime(p.createdAt)}</td><td><b>${esc(p.clientName)}</b></td><td>${esc(p.services)}</td><td>${esc(METHOD[p.method] ?? p.method)}</td><td>${money(p.amount)}</td></tr>`).join("") || `<tr><td colspan="5" class="empty">Платежей за период нет</td></tr>`}</tbody></table></div>`)
-        + (payroll ? panel("Зарплата врачей", "", `<div class="table-wrap"><table class="t"><thead><tr><th>Врач</th><th>Визитов</th><th>Выручка</th><th>Процент</th><th>Дней</th><th>Ставка</th><th>К выплате</th></tr></thead><tbody>
-          ${payroll.items.map((i) => `<tr><td><b>${esc(i.name)}</b></td><td>${i.visits}</td><td>${money(i.revenue)}</td><td>${i.commissionPercent}% = ${money(i.commission)}</td><td>${i.workedDays}</td><td>${money(i.rate)}</td><td><b>${money(i.total)}</b></td></tr>`).join("")}
-          <tr><td colspan="6"><b>Итого</b></td><td><b>${money(payroll.total)}</b></td></tr></tbody></table></div>`) : "");
+        <div class="table-wrap"><table class="t mobile-cards" id="cashTable"><thead><tr><th>Время</th><th>Клиент</th><th>Услуги</th><th>Способ</th><th>Сумма</th></tr></thead><tbody>
+        ${cash.payments.map((p) => `<tr><td data-label="Время">${fmtDateTime(p.createdAt)}</td><td data-label="Клиент"><b>${esc(p.clientName)}</b></td><td data-label="Услуги">${esc(p.services)}</td><td data-label="Способ">${esc(METHOD[p.method] ?? p.method)}</td><td data-label="Сумма">${money(p.amount)}</td></tr>`).join("") || `<tr class="empty-row"><td colspan="5" class="empty">Платежей за период нет</td></tr>`}</tbody></table></div>`)
+        + (payroll ? panel("Зарплата врачей", "", `<div class="table-wrap"><table class="t mobile-cards" id="payrollTable"><thead><tr><th>Врач</th><th>Визитов</th><th>Выручка</th><th>Процент</th><th>Дней</th><th>Ставка</th><th>К выплате</th></tr></thead><tbody>
+          ${payroll.items.map((i) => `<tr><td data-label="Врач"><b>${esc(i.name)}</b></td><td data-label="Визитов">${i.visits}</td><td data-label="Выручка">${money(i.revenue)}</td><td data-label="Процент">${i.commissionPercent}% = ${money(i.commission)}</td><td data-label="Дней">${i.workedDays}</td><td data-label="Ставка">${money(i.rate)}</td><td data-label="К выплате"><b>${money(i.total)}</b></td></tr>`).join("")}
+          <tr class="total-row"><td colspan="6"><b>Итого</b></td><td data-label="К выплате"><b>${money(payroll.total)}</b></td></tr></tbody></table></div>`) : "");
       $("#p-from").onchange = (e) => { from = e.target.value || from; draw().catch(fail); };
       $("#p-to").onchange = (e) => { to = e.target.value || to; draw().catch(fail); };
     }
